@@ -9,38 +9,75 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiAiPlanRouteImport } from './routes/api/ai-plan'
+import { Route as ApiPublicGateActionRouteImport } from './routes/api/public/gate/$action'
 
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAiPlanRoute = ApiAiPlanRouteImport.update({
+  id: '/api/ai-plan',
+  path: '/api/ai-plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicGateActionRoute = ApiPublicGateActionRouteImport.update({
+  id: '/api/public/gate/$action',
+  path: '/api/public/gate/$action',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/api/ai-plan': typeof ApiAiPlanRoute
+  '/api/public/gate/$action': typeof ApiPublicGateActionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/api/ai-plan': typeof ApiAiPlanRoute
+  '/api/public/gate/$action': typeof ApiPublicGateActionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRoute
+  '/api/ai-plan': typeof ApiAiPlanRoute
+  '/api/public/gate/$action': typeof ApiPublicGateActionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/admin' | '/api/ai-plan' | '/api/public/gate/$action'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/admin' | '/api/ai-plan' | '/api/public/gate/$action'
+  id: '__root__' | '/' | '/admin' | '/api/ai-plan' | '/api/public/gate/$action'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRoute
+  ApiAiPlanRoute: typeof ApiAiPlanRoute
+  ApiPublicGateActionRoute: typeof ApiPublicGateActionRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +85,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ai-plan': {
+      id: '/api/ai-plan'
+      path: '/api/ai-plan'
+      fullPath: '/api/ai-plan'
+      preLoaderRoute: typeof ApiAiPlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/gate/$action': {
+      id: '/api/public/gate/$action'
+      path: '/api/public/gate/$action'
+      fullPath: '/api/public/gate/$action'
+      preLoaderRoute: typeof ApiPublicGateActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRoute,
+  ApiAiPlanRoute: ApiAiPlanRoute,
+  ApiPublicGateActionRoute: ApiPublicGateActionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
