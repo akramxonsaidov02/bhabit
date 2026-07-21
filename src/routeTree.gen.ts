@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAiPlanRouteImport } from './routes/api/ai-plan'
+import { Route as ApiPublicGateActionRouteImport } from './routes/api/public/gate/$action'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const ApiAiPlanRoute = ApiAiPlanRouteImport.update({
   path: '/api/ai-plan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicGateActionRoute = ApiPublicGateActionRouteImport.update({
+  id: '/api/public/gate/$action',
+  path: '/api/public/gate/$action',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/ai-plan': typeof ApiAiPlanRoute
+  '/api/public/gate/$action': typeof ApiPublicGateActionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/ai-plan': typeof ApiAiPlanRoute
+  '/api/public/gate/$action': typeof ApiPublicGateActionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/ai-plan': typeof ApiAiPlanRoute
+  '/api/public/gate/$action': typeof ApiPublicGateActionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/ai-plan'
+  fullPaths: '/' | '/api/ai-plan' | '/api/public/gate/$action'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/ai-plan'
-  id: '__root__' | '/' | '/api/ai-plan'
+  to: '/' | '/api/ai-plan' | '/api/public/gate/$action'
+  id: '__root__' | '/' | '/api/ai-plan' | '/api/public/gate/$action'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiAiPlanRoute: typeof ApiAiPlanRoute
+  ApiPublicGateActionRoute: typeof ApiPublicGateActionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiPlanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/gate/$action': {
+      id: '/api/public/gate/$action'
+      path: '/api/public/gate/$action'
+      fullPath: '/api/public/gate/$action'
+      preLoaderRoute: typeof ApiPublicGateActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiAiPlanRoute: ApiAiPlanRoute,
+  ApiPublicGateActionRoute: ApiPublicGateActionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
