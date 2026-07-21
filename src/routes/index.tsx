@@ -1,24 +1,41 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect } from "react";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "BHabits — Kun tartibi va odatlar nazorati" },
+      { name: "description", content: "Namoz vaqtlari, ish, sport va kundalik odatlaringizni bitta joyda rejalashtiring. AI yordamida kun tartibingizni avtomatik moslashtiradi." },
+      { property: "og:title", content: "BHabits — Kun tartibi va odatlar nazorati" },
+      { property: "og:description", content: "Namoz vaqtlari, ish, sport va kundalik odatlaringizni bitta joyda rejalashtiring." },
+      { property: "og:url", content: "https://bhabits.lovable.app/" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a1162bd8-1ccb-42b9-9525-7740f124befb" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a1162bd8-1ccb-42b9-9525-7740f124befb" },
+    ],
+    links: [{ rel: "canonical", href: "https://bhabits.lovable.app/" }],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  useEffect(() => {
+    window.location.replace("/kun-tartibim.html");
+  }, []);
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0a0a0f", color: "#f2f2f8", fontFamily: "system-ui", padding: "2rem" }}>
+      <div style={{ maxWidth: 640, textAlign: "center" }}>
+        <h1 style={{ fontSize: "2rem", fontWeight: 700, margin: 0 }}>
+          BHabits — Kun tartibi va odatlar nazorati
+        </h1>
+        <p style={{ marginTop: "1rem", opacity: 0.85, lineHeight: 1.6 }}>
+          Namoz vaqtlari, ish, sport va kundalik odatlaringizni bitta joyda
+          rejalashtiring. AI yordamida kun tartibingiz avtomatik moslashadi,
+          bildirishnomalar sizni har bir vazifa uchun eslatib turadi.
+        </p>
+        <p style={{ marginTop: "1.5rem", opacity: 0.6, fontSize: "0.9rem" }}>
+          Ilova yuklanmoqda…
+        </p>
+      </div>
+    </main>
   );
 }

@@ -1,0 +1,7 @@
+# BHabits
+
+> BHabits — namoz vaqtlari, ish, sport va kundalik odatlarni bitta joyda boshqaradigan kun tartibi ilovasi. AI yordamida kun tartibi avtomatik moslashadi.
+
+## Pages
+
+- [Bosh sahifa](/): Kun tartibi ilovasi — vazifalar, namoz vaqtlari, odatlar nazorati va AI rejalashtirish.
