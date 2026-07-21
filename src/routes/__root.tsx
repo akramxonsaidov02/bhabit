@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "BHabits — Kun tartibi va odatlar nazorati" },
-      { name: "description", content: "BHabits — namoz vaqtlari, ish, sport va kundalik odatlarni bitta joyda boshqaradigan kun tartibi ilovasi." },
+      { title: "BHabits — Kirish" },
+      { name: "description", content: "Qurulmangizni admin tomonidan tasdiqlashi kerak." },
       { property: "og:site_name", content: "BHabits" },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://bhabits.lovable.app/" },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a1162bd8-1ccb-42b9-9525-7740f124befb" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/a1162bd8-1ccb-42b9-9525-7740f124befb" },
+      { property: "og:title", content: "BHabits — Kirish" },
+      { name: "twitter:title", content: "BHabits — Kirish" },
+      { property: "og:description", content: "Qurulmangizni admin tomonidan tasdiqlashi kerak." },
+      { name: "twitter:description", content: "Qurulmangizni admin tomonidan tasdiqlashi kerak." },
     ],
     links: [
       {
