@@ -14,7 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      app_admin_config: {
+        Row: {
+          id: number
+          pin_hash: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          pin_hash: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          pin_hash?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      app_devices: {
+        Row: {
+          active: boolean
+          approved_by: string | null
+          created_at: string
+          id: string
+          last_seen: string
+          name: string | null
+          permissions: Json
+          role: string
+          token_hash: string
+          user_agent: string | null
+        }
+        Insert: {
+          active?: boolean
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          last_seen?: string
+          name?: string | null
+          permissions?: Json
+          role: string
+          token_hash: string
+          user_agent?: string | null
+        }
+        Update: {
+          active?: boolean
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          last_seen?: string
+          name?: string | null
+          permissions?: Json
+          role?: string
+          token_hash?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_devices_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "app_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      app_pending_approvals: {
+        Row: {
+          approved_permissions: Json | null
+          approved_role: string | null
+          approved_token_hash: string | null
+          created_at: string
+          device_fingerprint: string
+          expires_at: string
+          id: string
+          qr_code: string
+          status: string
+          user_agent: string | null
+        }
+        Insert: {
+          approved_permissions?: Json | null
+          approved_role?: string | null
+          approved_token_hash?: string | null
+          created_at?: string
+          device_fingerprint: string
+          expires_at?: string
+          id?: string
+          qr_code: string
+          status?: string
+          user_agent?: string | null
+        }
+        Update: {
+          approved_permissions?: Json | null
+          approved_role?: string | null
+          approved_token_hash?: string | null
+          created_at?: string
+          device_fingerprint?: string
+          expires_at?: string
+          id?: string
+          qr_code?: string
+          status?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
