@@ -256,11 +256,29 @@
     return true;
   }
 
+  // Viewer mode: block all writes; changes stay only in memory/UI.
+  function isViewer() {
+    return !!(typeof window !== "undefined" && window.__BH_VIEWER__);
+  }
+
+  // Track recent local writes so realtime pullAll doesn't clobber optimistic UI.
+  const pendingWrites = new Map(); // key -> expiresAt (ms)
+  function markPending(key, ms) {
+    pendingWrites.set(key, Date.now() + (ms || 3000));
+  }
+  function hasPending(key) {
+    const exp = pendingWrites.get(key);
+    if (!exp) return false;
+    if (Date.now() > exp) { pendingWrites.delete(key); return false; }
+    return true;
+  }
+
   // ---- Public API used by kun-tartibim.html ----
   async function pushTaskChange(task) {
-    if (!state.ready || state.remoteApplying) return;
+    if (!state.ready || state.remoteApplying || isViewer()) return;
     const sb = state.sb;
     const row = localTaskToRow(task, state.user.id);
+    markPending("tasks", 2500);
     if (task.cloudId) {
       await sb.from("tasks").update(row).eq("id", task.cloudId);
     } else {
@@ -273,12 +291,15 @@
   }
 
   async function deleteTaskCloud(task) {
-    if (!state.ready || !task || !task.cloudId) return;
+    if (!state.ready || !task || !task.cloudId || isViewer()) return;
+    markPending("tasks", 2500);
     await state.sb.from("tasks").delete().eq("id", task.cloudId);
   }
 
   async function saveTaskCompletion(task, done) {
-    if (!state.ready || !task || !task.cloudId) return;
+    if (!state.ready || !task || !task.cloudId || isViewer()) return;
+    markPending("completions:" + task.cloudId, 4000);
+    markPending("completions", 2500);
     await state.sb.from("task_completions").upsert(
       {
         user_id: state.user.id,
@@ -292,7 +313,8 @@
   }
 
   async function pushSettings(S) {
-    if (!state.ready || state.remoteApplying) return;
+    if (!state.ready || state.remoteApplying || isViewer()) return;
+    markPending("settings", 2500);
     await state.sb.from("user_settings").upsert(
       {
         user_id: state.user.id,
