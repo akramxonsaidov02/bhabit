@@ -256,11 +256,29 @@
     return true;
   }
 
+  // Viewer mode: block all writes; changes stay only in memory/UI.
+  function isViewer() {
+    return !!(typeof window !== "undefined" && window.__BH_VIEWER__);
+  }
+
+  // Track recent local writes so realtime pullAll doesn't clobber optimistic UI.
+  const pendingWrites = new Map(); // key -> expiresAt (ms)
+  function markPending(key, ms) {
+    pendingWrites.set(key, Date.now() + (ms || 3000));
+  }
+  function hasPending(key) {
+    const exp = pendingWrites.get(key);
+    if (!exp) return false;
+    if (Date.now() > exp) { pendingWrites.delete(key); return false; }
+    return true;
+  }
+
   // ---- Public API used by kun-tartibim.html ----
   async function pushTaskChange(task) {
-    if (!state.ready || state.remoteApplying) return;
+    if (!state.ready || state.remoteApplying || isViewer()) return;
     const sb = state.sb;
     const row = localTaskToRow(task, state.user.id);
+    markPending("tasks", 2500);
     if (task.cloudId) {
       await sb.from("tasks").update(row).eq("id", task.cloudId);
     } else {
@@ -273,12 +291,15 @@
   }
 
   async function deleteTaskCloud(task) {
-    if (!state.ready || !task || !task.cloudId) return;
+    if (!state.ready || !task || !task.cloudId || isViewer()) return;
+    markPending("tasks", 2500);
     await state.sb.from("tasks").delete().eq("id", task.cloudId);
   }
 
   async function saveTaskCompletion(task, done) {
-    if (!state.ready || !task || !task.cloudId) return;
+    if (!state.ready || !task || !task.cloudId || isViewer()) return;
+    markPending("completions:" + task.cloudId, 4000);
+    markPending("completions", 2500);
     await state.sb.from("task_completions").upsert(
       {
         user_id: state.user.id,
@@ -292,7 +313,8 @@
   }
 
   async function pushSettings(S) {
-    if (!state.ready || state.remoteApplying) return;
+    if (!state.ready || state.remoteApplying || isViewer()) return;
+    markPending("settings", 2500);
     await state.sb.from("user_settings").upsert(
       {
         user_id: state.user.id,
@@ -317,12 +339,33 @@
   function applyCloudToLocal(S, cloud) {
     state.remoteApplying = true;
     try {
-      if (cloud.tasks) {
-        // preserve done from cloud completions
-        S.tasks = cloud.tasks;
+      if (cloud.tasks && !hasPending("tasks")) {
+        // Merge tasks by cloudId so any in-flight local edits (drag/edit) survive.
+        const cloudById = new Map(cloud.tasks.map((t) => [t.cloudId, t]));
+        const prev = Array.isArray(S.tasks) ? S.tasks : [];
+        const prevById = new Map(prev.filter((t) => t && t.cloudId).map((t) => [t.cloudId, t]));
+        S.tasks = cloud.tasks.map((t) => {
+          const local = prevById.get(t.cloudId);
+          // If a completion write is in flight for this task, keep local `done`.
+          if (local && hasPending("completions:" + t.cloudId)) {
+            return Object.assign({}, t, { done: local.done });
+          }
+          return t;
+        });
+        // Also keep any local-only tasks that haven't been synced yet (no cloudId).
+        prev.forEach((t) => { if (t && !t.cloudId) S.tasks.push(t); });
+        void cloudById;
+      } else if (cloud.tasks && hasPending("completions")) {
+        // Only refresh `done` from cloud where no per-task pending exists.
+        const doneByCloudId = new Map(cloud.tasks.map((t) => [t.cloudId, !!t.done]));
+        (S.tasks || []).forEach((t) => {
+          if (t && t.cloudId && !hasPending("completions:" + t.cloudId) && doneByCloudId.has(t.cloudId)) {
+            t.done = doneByCloudId.get(t.cloudId);
+          }
+        });
       }
       const st = cloud.settings;
-      if (st) {
+      if (st && !hasPending("settings")) {
         S.dayStart = st.day_start;
         S.sleep = st.sleep_time;
         S.prayers = st.prayers || S.prayers || {};
@@ -342,6 +385,7 @@
       state.remoteApplying = false;
     }
   }
+
 
   function subscribeRealtime(onChange) {
     const sb = state.sb;
@@ -400,16 +444,24 @@
 
     state.ready = true;
 
-    // Wire up real-time
-    subscribeRealtime(async (kind) => {
-      try {
-        const fresh = await pullAll();
-        applyCloudToLocal(S, fresh);
-        fire("remoteChange", { kind, S });
-      } catch (e) {
-        console.error("realtime pull failed", e);
-      }
+    // Wire up real-time (debounced so a burst of writes doesn't thrash the UI).
+    let rtTimer = null;
+    let lastKind = null;
+    subscribeRealtime((kind) => {
+      lastKind = kind;
+      if (rtTimer) return;
+      rtTimer = setTimeout(async () => {
+        rtTimer = null;
+        try {
+          const fresh = await pullAll();
+          applyCloudToLocal(S, fresh);
+          fire("remoteChange", { kind: lastKind, S });
+        } catch (e) {
+          console.error("realtime pull failed", e);
+        }
+      }, 350);
     });
+
 
     fire("ready", { user: state.user, deviceId: state.deviceId });
     return { user: state.user, deviceId: state.deviceId };
