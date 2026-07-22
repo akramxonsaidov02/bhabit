@@ -444,16 +444,24 @@
 
     state.ready = true;
 
-    // Wire up real-time
-    subscribeRealtime(async (kind) => {
-      try {
-        const fresh = await pullAll();
-        applyCloudToLocal(S, fresh);
-        fire("remoteChange", { kind, S });
-      } catch (e) {
-        console.error("realtime pull failed", e);
-      }
+    // Wire up real-time (debounced so a burst of writes doesn't thrash the UI).
+    let rtTimer = null;
+    let lastKind = null;
+    subscribeRealtime((kind) => {
+      lastKind = kind;
+      if (rtTimer) return;
+      rtTimer = setTimeout(async () => {
+        rtTimer = null;
+        try {
+          const fresh = await pullAll();
+          applyCloudToLocal(S, fresh);
+          fire("remoteChange", { kind: lastKind, S });
+        } catch (e) {
+          console.error("realtime pull failed", e);
+        }
+      }, 350);
     });
+
 
     fire("ready", { user: state.user, deviceId: state.deviceId });
     return { user: state.user, deviceId: state.deviceId };
