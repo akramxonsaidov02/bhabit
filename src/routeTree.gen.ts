@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiVoiceTranscribeRouteImport } from './routes/api/voice-transcribe'
 import { Route as ApiAiPlanRouteImport } from './routes/api/ai-plan'
 import { Route as ApiPublicGateActionRouteImport } from './routes/api/public/gate/$action'
 
@@ -22,6 +23,11 @@ const AdminRoute = AdminRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVoiceTranscribeRoute = ApiVoiceTranscribeRouteImport.update({
+  id: '/api/voice-transcribe',
+  path: '/api/voice-transcribe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAiPlanRoute = ApiAiPlanRouteImport.update({
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/api/ai-plan': typeof ApiAiPlanRoute
+  '/api/voice-transcribe': typeof ApiVoiceTranscribeRoute
   '/api/public/gate/$action': typeof ApiPublicGateActionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/api/ai-plan': typeof ApiAiPlanRoute
+  '/api/voice-transcribe': typeof ApiVoiceTranscribeRoute
   '/api/public/gate/$action': typeof ApiPublicGateActionRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,38 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/api/ai-plan': typeof ApiAiPlanRoute
+  '/api/voice-transcribe': typeof ApiVoiceTranscribeRoute
   '/api/public/gate/$action': typeof ApiPublicGateActionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/api/ai-plan' | '/api/public/gate/$action'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/api/ai-plan'
+    | '/api/voice-transcribe'
+    | '/api/public/gate/$action'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/api/ai-plan' | '/api/public/gate/$action'
-  id: '__root__' | '/' | '/admin' | '/api/ai-plan' | '/api/public/gate/$action'
+  to:
+    | '/'
+    | '/admin'
+    | '/api/ai-plan'
+    | '/api/voice-transcribe'
+    | '/api/public/gate/$action'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/api/ai-plan'
+    | '/api/voice-transcribe'
+    | '/api/public/gate/$action'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   ApiAiPlanRoute: typeof ApiAiPlanRoute
+  ApiVoiceTranscribeRoute: typeof ApiVoiceTranscribeRoute
   ApiPublicGateActionRoute: typeof ApiPublicGateActionRoute
 }
 
@@ -83,6 +109,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/voice-transcribe': {
+      id: '/api/voice-transcribe'
+      path: '/api/voice-transcribe'
+      fullPath: '/api/voice-transcribe'
+      preLoaderRoute: typeof ApiVoiceTranscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ai-plan': {
@@ -106,6 +139,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   ApiAiPlanRoute: ApiAiPlanRoute,
+  ApiVoiceTranscribeRoute: ApiVoiceTranscribeRoute,
   ApiPublicGateActionRoute: ApiPublicGateActionRoute,
 }
 export const routeTree = rootRouteImport
