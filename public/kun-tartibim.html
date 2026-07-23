@@ -1670,7 +1670,7 @@ function renderAdmTasks(){
   <input value="${esc(t.name)}" onchange="S.tasks.find(x=>x.id===${t.id}).name=this.value">
   <input type="time" value="${t.start||''}" style="width:88px;flex:0" onchange="S.tasks.find(x=>x.id===${t.id}).start=this.value">
   <input type="time" value="${t.end||''}" style="width:88px;flex:0" onchange="S.tasks.find(x=>x.id===${t.id}).end=this.value">
-  <button class="adm-x" onclick="S.tasks=S.tasks.filter(x=>x.id!==${t.id});renderAdmTasks()">✕</button>
+  <button class="adm-x" onclick="S.tasks=S.tasks.filter(x=>x.id!=='${t.id}');renderAdmTasks()">✕</button>
 </div>`).join('');
 }
 function saveAdmTasks(){ persist(); toast('✅ Saqlandi'); }
