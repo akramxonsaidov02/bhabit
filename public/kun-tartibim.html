@@ -1311,11 +1311,11 @@ function taskHtml(t,i){
   const dragH=editMode?'<div class="drag-handle" draggable="true">⠿</div>':'';
   const checkContent=t.done?'✓':t.deferred?'⏳':'';
   return `
-<div class="tc ${dc} ${defc} cat-${t.cat||'other'}" id="tc${t.id}" style="${delayAnim}" draggable="${editMode}" ondragstart="dragStart(event,${t.id})" ondragover="dragOver(event)" ondrop="drop(event,${t.id})">
+<div class="tc ${dc} ${defc} cat-${t.cat||'other'}" id="tc${t.id}" style="${delayAnim}" draggable="${editMode}" ondragstart="dragStart(event,'${t.id}')" ondragover="dragOver(event)" ondrop="drop(event,'${t.id}')">
   ${dragH}
   <div class="tc-bar"></div>
   <div class="tc-inner">
-    <div class="tc-check" onclick="toggleTask(${t.id})">${checkContent}</div>
+    <div class="tc-check" onclick="toggleTask('${t.id}')">${checkContent}</div>
     <div class="tc-time">${esc(timeStr)}</div>
     <div class="tc-body">
       <div class="tc-body-name">${esc(t.name)}</div>
@@ -1324,9 +1324,9 @@ function taskHtml(t,i){
     </div>
   </div>
   <div class="tc-actions">
-    <button class="ta-b" onclick="openEdit(${t.id})">✎</button>
-    <button class="ta-b defer" onclick="toggleDefer(${t.id})">⏳</button>
-    <button class="ta-b del" onclick="confirmDeleteTask(${t.id})">✕</button>
+    <button class="ta-b" onclick="openEdit('${t.id}')">✎</button>
+    <button class="ta-b defer" onclick="toggleDefer('${t.id}')">⏳</button>
+    <button class="ta-b del" onclick="confirmDeleteTask('${t.id}')">✕</button>
   </div>
 </div>`;
 }
@@ -1343,7 +1343,7 @@ function updateProgress(){
 }
 
 function toggleDefer(id){
-  const t=S.tasks.find(x=>x.id===id); if(!t)return;
+  const t=S.tasks.find(x=>String(x.id)===String(id)); if(!t)return;
   t.deferred=!t.deferred; if(t.deferred){t.done=false;t.autoChecked=false;}
   persist(); renderSchedule(); toast(t.deferred?'⏳ Kechiktirildi':'↩️ Kechiktirishdan olindi');
 }
@@ -1368,7 +1368,7 @@ function toggleEditMode(){
 // ── INLINE EDIT ──
 function inlineEdit(id,field,el){
   if(!editMode)return;
-  const t=S.tasks.find(x=>x.id===id); if(!t)return;
+  const t=S.tasks.find(x=>String(x.id)===String(id)); if(!t)return;
   const old=el.textContent;
   el.contentEditable=true; el.focus();
   el.addEventListener('blur',()=>{ t[field]=el.textContent.trim()||old; el.contentEditable=false; persist(); },{once:true});
@@ -1381,8 +1381,8 @@ function dragStart(e,id){ dragId=id; e.dataTransfer.effectAllowed='move'; }
 function dragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; }
 function drop(e,targetId){
   e.preventDefault(); if(dragId===targetId)return;
-  const from=S.tasks.findIndex(x=>x.id===dragId);
-  const to=S.tasks.findIndex(x=>x.id===targetId);
+  const from=S.tasks.findIndex(x=>String(x.id)===String(dragId));
+  const to=S.tasks.findIndex(x=>String(x.id)===String(targetId));
   if(from<0||to<0)return;
   const [item]=S.tasks.splice(from,1);
   S.tasks.splice(to,0,item);
@@ -1402,7 +1402,7 @@ function openAdd(){
   openOv('ovTask');
 }
 function openEdit(id){
-  const t=S.tasks.find(x=>x.id===id); if(!t)return;
+  const t=S.tasks.find(x=>String(x.id)===String(id)); if(!t)return;
   editId=id;
   document.getElementById('taskTitle').textContent='Vazifani tahrirlash';
   document.getElementById('fName').value=t.name;
@@ -1492,7 +1492,7 @@ function cascadeShift(){
     const prevEnd=t2m(prev.end), curStart=t2m(t.start);
     if(curStart<prevEnd){
       const dur=t.end?t2m(t.end)-curStart:30;
-      const real=S.tasks.find(x=>x.id===t.id);
+      const real=S.tasks.find(x=>String(x.id)===String(t.id));
       if(real){
         real.start=m2t(prevEnd);
         if(real.end) real.end=m2t(prevEnd+dur);
@@ -1514,7 +1514,7 @@ function saveTask(){
   const newCat=document.getElementById('fCat').value;
   const newNote=document.getElementById('fNote').value;
   if(editId){
-    const t=S.tasks.find(x=>x.id===editId);
+    const t=S.tasks.find(x=>String(x.id)===String(editId));
     if(!t) return;
     const oldStart=t.start, oldEnd=t.end;
     t.name=name; t.start=newStart; t.end=newEnd; t.cat=newCat; t.note=newNote;
@@ -1549,13 +1549,13 @@ function saveTask(){
   if(S.notifOn) scheduleAllNotifications();
 }
 function delTask(){
-  const t=S.tasks.find(x=>x.id===editId);
+  const t=S.tasks.find(x=>String(x.id)===String(editId));
   S.tasks=S.tasks.filter(x=>x.id!==editId);
   persist(); closeOv('ovTask'); renderSchedule(); toast('🗑️ O\'chirildi');
   if(t && window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.deleteTaskCloud(t);
 }
 function deferTask(){
-  const t=S.tasks.find(x=>x.id===editId); if(!t)return;
+  const t=S.tasks.find(x=>String(x.id)===String(editId)); if(!t)return;
   t.deferred=!t.deferred; if(t.deferred){t.done=false;t.autoChecked=false;}
   persist(); closeOv('ovTask'); renderSchedule();
   toast(t.deferred?'⏳ Kechiktirildi':'↩️ Kechiktirishdan olindi');
@@ -1667,10 +1667,10 @@ function closeAdmin(){
 function renderAdmTasks(){
   document.getElementById('admTasks').innerHTML=S.tasks.map(t=>`
 <div class="adm-task-row">
-  <input value="${esc(t.name)}" onchange="S.tasks.find(x=>x.id===${t.id}).name=this.value">
-  <input type="time" value="${t.start||''}" style="width:88px;flex:0" onchange="S.tasks.find(x=>x.id===${t.id}).start=this.value">
-  <input type="time" value="${t.end||''}" style="width:88px;flex:0" onchange="S.tasks.find(x=>x.id===${t.id}).end=this.value">
-  <button class="adm-x" onclick="S.tasks=S.tasks.filter(x=>x.id!==${t.id});renderAdmTasks()">✕</button>
+  <input value="${esc(t.name)}" onchange="S.tasks.find(x=>String(x.id)===String('${t.id}')).name=this.value">
+  <input type="time" value="${t.start||''}" style="width:88px;flex:0" onchange="S.tasks.find(x=>String(x.id)===String('${t.id}')).start=this.value">
+  <input type="time" value="${t.end||''}" style="width:88px;flex:0" onchange="S.tasks.find(x=>String(x.id)===String('${t.id}')).end=this.value">
+  <button class="adm-x" onclick="S.tasks=S.tasks.filter(x=>x.id!=='${t.id}');renderAdmTasks()">✕</button>
 </div>`).join('');
 }
 function saveAdmTasks(){ persist(); toast('✅ Saqlandi'); }
@@ -2142,7 +2142,7 @@ function updateClock(){
   }catch(e){}
 }
 function toggleTask(id){
-  const t=S.tasks.find(x=>x.id===id); if(!t) return;
+  const t=S.tasks.find(x=>String(x.id)===String(id)); if(!t) return;
   t.done=!t.done;
   if(!S.activityLog) S.activityLog=[];
   S.activityLog.unshift({t:Date.now(),msg:(t.done?'✅ ':'↩️ ')+t.name});
@@ -2172,7 +2172,7 @@ async function fetchPrayers(force){
   }catch(e){}
 }
 function openFocusMode(id){
-  const t = id ? S.tasks.find(x=>x.id===id) : S.tasks.find(x=>!x.done);
+  const t = id ? S.tasks.find(x=>String(x.id)===String(id)) : S.tasks.find(x=>!x.done);
   if(!t){ toast('Bajarilmagan vazifa yo\u2019q'); return; }
   const ov=document.getElementById('focusOv');
   document.getElementById('focusName').textContent=t.name;
@@ -2183,7 +2183,7 @@ function openFocusMode(id){
   ov.classList.add('open');
 }
 function closeFocusMode(){ document.getElementById('focusOv').classList.remove('open'); stopFocusTimer(); focusTaskId=null; }
-function focusDone(){ if(focusTaskId){ const t=S.tasks.find(x=>x.id===focusTaskId); if(t&&!t.done) toggleTask(focusTaskId); } closeFocusMode(); }
+function focusDone(){ if(focusTaskId){ const t=S.tasks.find(x=>String(x.id)===String(focusTaskId)); if(t&&!t.done) toggleTask(focusTaskId); } closeFocusMode(); }
 let focusTaskId=null, focusStart=0, focusTimer=null, pomoMode='work', pomoLeft=25*60;
 function startFocusTimer(){
   stopFocusTimer();
@@ -2534,7 +2534,7 @@ async function aiReplan(){
     if(!updates.length) throw new Error('Bo\'sh javob');
     // Preview
     const preview=updates.slice(0,5).map(u=>{
-      const t=S.tasks.find(x=>x.id===u.id);
+      const t=S.tasks.find(x=>String(x.id)===String(u.id));
       return t?('• '+t.name+': '+t.start+'→'+u.start):'';
     }).filter(Boolean).join('\n');
     showConfirm(
@@ -2543,7 +2543,7 @@ async function aiReplan(){
       ()=>{
         let n=0;
         updates.forEach(u=>{
-          const t=S.tasks.find(x=>x.id===u.id);
+          const t=S.tasks.find(x=>String(x.id)===String(u.id));
           if(!t||t.cat==='prayer') return;
           if(u.start) t.start=u.start;
           if(u.end) t.end=u.end;
