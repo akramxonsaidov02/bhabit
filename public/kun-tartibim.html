@@ -409,6 +409,17 @@ body::before {
 }
 .fab:hover { transform:translateY(-2px) scale(1.05); box-shadow:0 12px 32px rgba(var(--accent-rgb),.5); }
 .fab:active { transform:scale(.92); }
+.fab.voice {
+  right:76px; background:linear-gradient(145deg,#8b5cf6,#ec4899);
+  box-shadow:0 6px 24px rgba(139,92,246,.4), inset 0 1px 0 rgba(255,255,255,.2);
+  font-size:22px;
+}
+.fab.voice.active {
+  animation:voicePulse 1.2s ease-in-out infinite;
+  background:linear-gradient(145deg,#ef4444,#f97316);
+  box-shadow:0 6px 30px rgba(239,68,68,.6), inset 0 1px 0 rgba(255,255,255,.25);
+}
+@keyframes voicePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
 
 /* ── BOTTOM NAV ── */
 .bnav {
@@ -748,6 +759,7 @@ body::before {
       <button onclick="openCoach()" class="ripple-host" style="flex:1;padding:10px;border-radius:var(--r);border:1px solid rgba(var(--Ar),.25);background:rgba(var(--Ar),.1);color:var(--A);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer">🤖 Murabbiy</button>
     </div>
     <div id="statsContent"></div>
+  <button class="fab voice" id="voiceBtn" onclick="toggleVoice()" title="Ovozli buyruq">🎤</button>
   <button class="fab" onclick="openAdd()">＋</button>
 
   <div class="bnav">
@@ -1992,60 +2004,163 @@ async function tryBiometric(){
 function base64ToArray(b64){ return Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); }
 
 // ══════════════════════════════════════
-//  VOICE COMMANDS
+//  VOICE COMMANDS — Lovable AI STT (o'zbek, cheksiz, aniq)
 // ══════════════════════════════════════
-let voiceActive=false, voiceRecog=null;
-function initVoice(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){ toast('⚠️ Ovozli buyruq bu brauzerda ishlamaydi'); return; }
-  voiceRecog=new SR();
-  voiceRecog.lang='uz-UZ';
-  voiceRecog.continuous=false;
-  voiceRecog.interimResults=false;
-  voiceRecog.onresult=e=>{
-    const cmd=e.results[0][0].transcript.toLowerCase().trim();
-    processVoiceCmd(cmd);
-  };
-  voiceRecog.onerror=()=>{ voiceActive=false; updateVoiceBtn(); };
-  voiceRecog.onend=()=>{ voiceActive=false; updateVoiceBtn(); };
+let voiceActive=false, voiceRec=null, voiceStream=null, voiceChunks=[], voiceMime='audio/webm', voiceBusy=false;
+
+function pickMime(){
+  const cands=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/mpeg','audio/ogg'];
+  if(!window.MediaRecorder) return null;
+  for(const m of cands){ try{ if(MediaRecorder.isTypeSupported(m)) return m; }catch{} }
+  return '';
 }
-function toggleVoice(){
-  if(!voiceRecog) initVoice();
-  if(!voiceRecog) return;
-  if(voiceActive){ voiceRecog.stop(); voiceActive=false; }
-  else{ voiceRecog.start(); voiceActive=true; haptic('medium'); toast('🎤 Gapiring...'); }
+
+async function startVoiceRec(){
+  if(voiceBusy){ toast('⏳ Kuting...'); return; }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){
+    toast('⚠️ Bu brauzer ovoz yozishni qo\'llamaydi'); return;
+  }
+  if(window.__BH_VIEWER__){ toast('👁 Viewer rejimida ovozli buyruq o\'chirilgan'); return; }
+  try{
+    voiceStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  }catch(e){
+    toast('🎤 Mikrofonga ruxsat berilmadi'); return;
+  }
+  const mime=pickMime();
+  try{
+    voiceRec=mime?new MediaRecorder(voiceStream,{mimeType:mime}):new MediaRecorder(voiceStream);
+  }catch(e){
+    voiceRec=new MediaRecorder(voiceStream);
+  }
+  voiceMime=voiceRec.mimeType||mime||'audio/webm';
+  voiceChunks=[];
+  voiceRec.ondataavailable=e=>{ if(e.data&&e.data.size>0) voiceChunks.push(e.data); };
+  voiceRec.onstop=async()=>{
+    try{ voiceStream.getTracks().forEach(t=>t.stop()); }catch{}
+    voiceStream=null;
+    const blob=new Blob(voiceChunks,{type:voiceMime});
+    voiceChunks=[];
+    voiceActive=false; updateVoiceBtn();
+    if(blob.size<1024){ toast('🎤 Yozuv juda qisqa'); return; }
+    await sendVoiceBlob(blob);
+  };
+  voiceRec.start(); // bir bo'lak — start/stop tugagach to'liq fayl
+  voiceActive=true; haptic('medium'); toast('🎤 Gapiring... (tugatish uchun yana bosing)');
   updateVoiceBtn();
 }
+
+function stopVoiceRec(){
+  if(!voiceRec) return;
+  try{ voiceRec.stop(); }catch{}
+  voiceRec=null;
+}
+
+function toggleVoice(){
+  if(voiceActive) stopVoiceRec();
+  else startVoiceRec();
+}
+
 function updateVoiceBtn(){
   const btn=document.getElementById('voiceBtn');
-  if(btn){ btn.textContent=voiceActive?'🔴':'🎤'; btn.classList.toggle('active',voiceActive); }
+  if(!btn) return;
+  if(voiceBusy){ btn.textContent='⏳'; btn.classList.remove('active'); return; }
+  btn.textContent=voiceActive?'🔴':'🎤';
+  btn.classList.toggle('active',voiceActive);
 }
-function processVoiceCmd(cmd){
-  haptic('light');
-  // Namoz tasdiqlash
-  const prayerNames={bomdod:'fajr',peshin:'dhuhr',asr:'asr',shom:'maghrib',xufton:'isha'};
-  for(const [name,key] of Object.entries(prayerNames)){
-    if(cmd.includes(name)&&(cmd.includes('bajardim')||cmd.includes('o’qidim')||cmd.includes('tugadi'))){
-      const task=S.tasks.find(t=>t.name.toLowerCase().includes(name)&&!t.done);
-      if(task){toggleTask(task.id);toast(`✅ ${task.name} belgilandi`);return;}
+
+async function sendVoiceBlob(blob){
+  voiceBusy=true; updateVoiceBtn();
+  toast('🧠 Tinglayapman...');
+  try{
+    const fd=new FormData();
+    const ext=(voiceMime.includes('mp4')?'mp4':voiceMime.includes('mpeg')?'mp3':voiceMime.includes('ogg')?'ogg':'webm');
+    fd.append('file',blob,'voice.'+ext);
+    const tr=await fetch('/api/voice-transcribe',{method:'POST',body:fd});
+    const trData=await tr.json().catch(()=>({}));
+    if(!tr.ok||!trData.ok||!trData.text){
+      toast('❌ Ovozni tanib bo\'lmadi'); return;
     }
+    const text=String(trData.text||'').trim();
+    toast('💬 "'+text.slice(0,60)+(text.length>60?'…':'')+'"');
+    await runVoiceCommand(text);
+  }catch(e){
+    toast('❌ Xatolik: '+(e&&e.message||'noma\'lum'));
+  }finally{
+    voiceBusy=false; updateVoiceBtn();
   }
-  // Umumiy vazifa
-  const doneWords=['bajardim','qildim','tugadi','bo’ldi'];
-  const hasDone=doneWords.some(w=>cmd.includes(w));
-  if(hasDone){
-    const task=S.tasks.find(t=>!t.done&&cmd.includes(t.name.toLowerCase().split(' ')[0]));
-    if(task){toggleTask(task.id);toast(`✅ "${task.name}" belgilandi`);return;}
+}
+
+async function runVoiceCommand(text){
+  const res=await fetch('/api/ai-plan',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      mode:'voice',
+      text,
+      now:new Date().toISOString(),
+      dayStart:S.dayStart||'06:30',
+      sleep:S.sleep||S.sleepTime||'22:30',
+      prayers:S.prayers||{},
+      tasks:(S.tasks||[]).map(t=>({id:t.id,name:t.name,start:t.start,end:t.end,done:!!t.done})),
+    }),
+  });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok||!data.ok){ toast('❌ AI javob bermadi'); return; }
+  const raw=String(data.content||'').replace(/```json?|```/g,'').trim();
+  let cmd=null;
+  try{ cmd=JSON.parse(raw); }catch{ toast('❌ AI javobi tushunarsiz'); return; }
+  await executeVoiceAction(cmd);
+}
+
+async function executeVoiceAction(cmd){
+  if(!cmd||!cmd.action){ toast('🤔 Buyruq tushunilmadi'); return; }
+  const reply=cmd.reply||'';
+  if(cmd.action==='add'&&cmd.task&&cmd.task.name){
+    const j=cmd.task;
+    const nt={
+      id:Date.now(),
+      name:String(j.name).trim(),
+      done:false, autoChecked:false, deferred:false,
+      start:j.start||'', end:j.end||'',
+      cat:j.category||'other',
+      note:j.note||'',
+    };
+    S.tasks.push(nt);
+    persist(); renderSchedule();
+    if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.pushTaskChange(nt);
+    toast('➕ '+(reply||('Qo\'shildi: '+nt.name)));
+    haptic('success');
+    return;
   }
-  // Qo’shish
-  if(cmd.includes('qo’sh')||cmd.includes('yangi')){
-    openAdd(); toast('➕ Yangi vazifa'); return;
+  if(cmd.action==='complete'||cmd.action==='uncomplete'){
+    const t=findVoiceTarget(cmd);
+    if(!t){ toast('🤔 Mos vazifa topilmadi'); return; }
+    const want=cmd.action==='complete';
+    if(!!t.done!==want) toggleTask(t.id);
+    toast((want?'✅ ':'↩️ ')+(reply||t.name));
+    haptic('success');
+    return;
   }
-  // Focus
-  if(cmd.includes('focus')||cmd.includes('boshlash')){
-    openFocusMode(); return;
+  if(cmd.action==='delete'){
+    const t=findVoiceTarget(cmd);
+    if(!t){ toast('🤔 Mos vazifa topilmadi'); return; }
+    S.tasks=S.tasks.filter(x=>String(x.id)!==String(t.id));
+    persist(); renderSchedule();
+    if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.deleteTaskCloud(t);
+    toast('🗑️ '+(reply||t.name));
+    return;
   }
-  toast(`🎤 "${cmd}" — buyruq topilmadi`);
+  toast('🤔 '+(reply||'Buyruq tushunilmadi'));
+}
+
+function findVoiceTarget(cmd){
+  if(cmd.targetId!=null){
+    const t=(S.tasks||[]).find(x=>String(x.id)===String(cmd.targetId));
+    if(t) return t;
+  }
+  const q=(cmd.task&&cmd.task.name?cmd.task.name:'').toLowerCase().trim();
+  if(!q) return null;
+  return (S.tasks||[]).find(x=>String(x.name||'').toLowerCase().includes(q));
 }
 
 // ══════════════════════════════════════

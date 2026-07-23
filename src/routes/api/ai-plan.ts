@@ -124,6 +124,64 @@ export const Route = createFileRoute("/api/ai-plan")({
           );
         }
 
+        if (mode === "voice") {
+          const text: string = String(payload.text || "").slice(0, 500).trim();
+          if (!text) {
+            return new Response(JSON.stringify({ error: "Matn kerak" }), {
+              status: 400, headers: { "Content-Type": "application/json" },
+            });
+          }
+          const dayStart = payload.dayStart || "06:30";
+          const sleep = payload.sleep || "22:30";
+          const prayers = payload.prayers || {};
+          const now: string = payload.now || new Date().toISOString();
+          const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
+          // Faqat kerakli minimumni yuboramiz
+          const slim = tasks.slice(0, 60).map((t: any) => ({
+            id: t.id, name: t.name, start: t.start, end: t.end, done: !!t.done,
+          }));
+
+          const system = [
+            "Sen o'zbek tilidagi ovozli yordamchisan. Foydalanuvchining ovozli buyrug'ini tahlil qilib, aniq amalga aylantirasan.",
+            "Foydalanuvchi Marg'ilon shahridan, namoz o'qiydi.",
+            `Hozirgi vaqt (ISO): ${now}. Kun ${dayStart} da boshlanadi, ${sleep} da tugaydi.`,
+            `Namoz vaqtlari: ${JSON.stringify(prayers)}.`,
+            `Mavjud vazifalar (id, name, start, end, done): ${JSON.stringify(slim)}`,
+            "",
+            "Foydalanuvchi qilishi mumkin:",
+            "1) YANGI vazifa qo'shish — masalan: 'ertaga soat 9 da yugurishni qo'sh', 'kechqurun 20:00 da ingliz tili'",
+            "2) MAVJUD vazifani BAJARILDI deb belgilash — masalan: 'yugurishni bajardim', 'nonushta qildim', 'peshinni o'qidim'",
+            "3) Vazifani BAJARILMAGAN qilish — 'bajarilmagan qil', 'belgini olib tashla'",
+            "4) Vazifani O'CHIRISH — 'o'chir', 'olib tashla'",
+            "",
+            "FAQAT sof JSON qaytar, hech qanday markdown yoki tushuntirish yo'q. Format:",
+            '{"action":"add|complete|uncomplete|delete|unknown","task":{"name":"...","start":"HH:MM","end":"HH:MM","category":"morning|work|prayer|food|sport|medicine|other|night","priority":"yuqori|o\'rta|past","note":"..."},"targetId":<mavjud vazifa id yoki null>,"reply":"o\'zbekcha qisqa javob"}',
+            "",
+            "Qoidalar:",
+            "- action='add' bo'lsa: 'task' to'liq bo'lsin, targetId=null. Vaqt aytilmasa mantiqiy vaqtni o'zing tanla (namoz vaqtlariga to'qnashmasin).",
+            "- action='complete/uncomplete/delete' bo'lsa: mavjud vazifalar ichidan eng mos keluvchini top va targetId'ga uning id'sini yoz. 'task' shart emas.",
+            "- Agar buyruq tushunarsiz yoki mos vazifa topilmasa: action='unknown', reply'da sababni yoz.",
+            "- reply doim o'zbek tilida, do'stona va qisqa (1 jumla).",
+          ].join("\n");
+
+          const r = await callGateway(
+            [
+              { role: "system", content: system },
+              { role: "user", content: text },
+            ],
+            apiKey,
+          );
+          if (!r.ok) {
+            return new Response(JSON.stringify({ error: "AI xatoligi", status: r.status }), {
+              status: 502, headers: { "Content-Type": "application/json" },
+            });
+          }
+          return new Response(
+            JSON.stringify({ ok: true, content: r.content, transcript: text }),
+            { headers: { "Content-Type": "application/json" } },
+          );
+        }
+
         return new Response(JSON.stringify({ error: "Noma'lum rejim" }), {
           status: 400, headers: { "Content-Type": "application/json" },
         });
