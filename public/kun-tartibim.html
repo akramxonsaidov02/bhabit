@@ -1381,8 +1381,8 @@ function dragStart(e,id){ dragId=id; e.dataTransfer.effectAllowed='move'; }
 function dragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; }
 function drop(e,targetId){
   e.preventDefault(); if(dragId===targetId)return;
-  const from=S.tasks.findIndex(x=>x.id===dragId);
-  const to=S.tasks.findIndex(x=>x.id===targetId);
+  const from=S.tasks.findIndex(x=>String(x.id)===String(dragId));
+  const to=S.tasks.findIndex(x=>String(x.id)===String(targetId));
   if(from<0||to<0)return;
   const [item]=S.tasks.splice(from,1);
   S.tasks.splice(to,0,item);
@@ -1667,9 +1667,9 @@ function closeAdmin(){
 function renderAdmTasks(){
   document.getElementById('admTasks').innerHTML=S.tasks.map(t=>`
 <div class="adm-task-row">
-  <input value="${esc(t.name)}" onchange="S.tasks.find(x=>x.id===${t.id}).name=this.value">
-  <input type="time" value="${t.start||''}" style="width:88px;flex:0" onchange="S.tasks.find(x=>x.id===${t.id}).start=this.value">
-  <input type="time" value="${t.end||''}" style="width:88px;flex:0" onchange="S.tasks.find(x=>x.id===${t.id}).end=this.value">
+  <input value="${esc(t.name)}" onchange="S.tasks.find(x=>String(x.id)===String('${t.id}')).name=this.value">
+  <input type="time" value="${t.start||''}" style="width:88px;flex:0" onchange="S.tasks.find(x=>String(x.id)===String('${t.id}')).start=this.value">
+  <input type="time" value="${t.end||''}" style="width:88px;flex:0" onchange="S.tasks.find(x=>String(x.id)===String('${t.id}')).end=this.value">
   <button class="adm-x" onclick="S.tasks=S.tasks.filter(x=>x.id!=='${t.id}');renderAdmTasks()">✕</button>
 </div>`).join('');
 }
