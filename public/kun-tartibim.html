@@ -1311,11 +1311,11 @@ function taskHtml(t,i){
   const dragH=editMode?'<div class="drag-handle" draggable="true">⠿</div>':'';
   const checkContent=t.done?'✓':t.deferred?'⏳':'';
   return `
-<div class="tc ${dc} ${defc} cat-${t.cat||'other'}" id="tc${t.id}" style="${delayAnim}" draggable="${editMode}" ondragstart="dragStart(event,${t.id})" ondragover="dragOver(event)" ondrop="drop(event,${t.id})">
+<div class="tc ${dc} ${defc} cat-${t.cat||'other'}" id="tc${t.id}" style="${delayAnim}" draggable="${editMode}" ondragstart="dragStart(event,'${t.id}')" ondragover="dragOver(event)" ondrop="drop(event,'${t.id}')">
   ${dragH}
   <div class="tc-bar"></div>
   <div class="tc-inner">
-    <div class="tc-check" onclick="toggleTask(${t.id})">${checkContent}</div>
+    <div class="tc-check" onclick="toggleTask('${t.id}')">${checkContent}</div>
     <div class="tc-time">${esc(timeStr)}</div>
     <div class="tc-body">
       <div class="tc-body-name">${esc(t.name)}</div>
@@ -1324,9 +1324,9 @@ function taskHtml(t,i){
     </div>
   </div>
   <div class="tc-actions">
-    <button class="ta-b" onclick="openEdit(${t.id})">✎</button>
-    <button class="ta-b defer" onclick="toggleDefer(${t.id})">⏳</button>
-    <button class="ta-b del" onclick="confirmDeleteTask(${t.id})">✕</button>
+    <button class="ta-b" onclick="openEdit('${t.id}')">✎</button>
+    <button class="ta-b defer" onclick="toggleDefer('${t.id}')">⏳</button>
+    <button class="ta-b del" onclick="confirmDeleteTask('${t.id}')">✕</button>
   </div>
 </div>`;
 }
