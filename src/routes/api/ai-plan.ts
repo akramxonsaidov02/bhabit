@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { extractToken, findDeviceByToken } from "@/lib/gate.server";
+
 
 // Lovable AI Gateway proxy for the Kun Tartibim static app.
 // Supports two modes:
