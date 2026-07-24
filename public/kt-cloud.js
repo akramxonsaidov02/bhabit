@@ -467,6 +467,13 @@
     return { user: state.user, deviceId: state.deviceId };
   }
 
+  async function syncTasks(tasks) {
+    if (!state.ready || isViewer() || !Array.isArray(tasks)) return;
+    for (const t of tasks) {
+      try { await pushTaskChange(t); } catch (e) { console.error(e); }
+    }
+  }
+
   window.KTCloud = {
     init,
     on(event, cb) {
@@ -476,8 +483,10 @@
     deleteTaskCloud,
     saveTaskCompletion,
     pushSettings,
+    syncTasks,
     listDevices,
     removeDevice,
+    isViewer,
     getUser: () => state.user,
     getDeviceId: () => state.deviceId,
     isReady: () => state.ready,
