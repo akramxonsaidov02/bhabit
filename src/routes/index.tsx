@@ -32,9 +32,9 @@ function Gate() {
   const pollRef = useRef<number | null>(null);
 
   const goToApp = useCallback((device: DeviceInfo) => {
-    if (device.role === "admin" || device.role === "sub_admin") {
-      window.location.replace("/admin");
-    } else if (device.role === "viewer") {
+    // Admin ham asosiy ilovaga kiradi. Admin panelga sozlamalardagi
+    // "⚙️ Admin panel" tugmasi orqali o'tiladi.
+    if (device.role === "viewer") {
       window.location.replace("/kun-tartibim.html?viewer=1");
     } else {
       window.location.replace("/kun-tartibim.html");
