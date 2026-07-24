@@ -138,7 +138,7 @@ export const Route = createFileRoute("/api/ai-plan")({
         }
 
         if (mode === "voice") {
-          const text: string = String(payload.text || "").slice(0, 500).trim();
+          const text: string = String(payload.text || payload.transcript || "").slice(0, 500).trim();
           if (!text) {
             return new Response(JSON.stringify({ error: "Matn kerak" }), {
               status: 400, headers: { "Content-Type": "application/json" },
