@@ -36,7 +36,7 @@ async function handle(request: Request, action: string, method: string): Promise
     return json({ error: "not_found" }, 404);
   } catch (err) {
     console.error("[gate]", action, err);
-    return json({ error: "server_error", message: String((err as Error).message ?? err) }, 500);
+    return json({ error: "server_error" }, 500);
   }
 }
 
@@ -81,7 +81,7 @@ async function verifyPin(request: Request) {
     })
     .select("id, role, name, permissions")
     .single();
-  if (error) return json({ error: "insert_failed", message: error.message }, 500);
+  if (error) return json({ error: "insert_failed" }, 500);
   return json({ token, device: dev });
 }
 
@@ -113,7 +113,7 @@ async function requestApproval(request: Request) {
     })
     .select("qr_code, expires_at")
     .single();
-  if (error) return json({ error: "insert_failed", message: error.message }, 500);
+  if (error) return json({ error: "insert_failed" }, 500);
   // name is captured on approval side; ignored here to keep payload minimal
   void name;
   return json({ qr: data.qr_code, expiresAt: data.expires_at });
@@ -196,7 +196,7 @@ async function approve(request: Request) {
     })
     .select("id")
     .single();
-  if (insErr) return json({ error: "insert_failed", message: insErr.message }, 500);
+  if (insErr) return json({ error: "insert_failed" }, 500);
 
   const { error: updErr } = await db
     .from("app_pending_approvals")
@@ -208,7 +208,7 @@ async function approve(request: Request) {
       approved_token_hash: "plain:" + newDeviceToken,
     })
     .eq("qr_code", qr);
-  if (updErr) return json({ error: "update_failed", message: updErr.message }, 500);
+  if (updErr) return json({ error: "update_failed" }, 500);
 
   return json({ ok: true, deviceId: dev.id });
 }
@@ -223,7 +223,7 @@ async function listDevices(request: Request) {
     .select("id, name, user_agent, role, permissions, active, created_at, last_seen")
     .eq("active", true)
     .order("created_at", { ascending: false });
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: "server_error" }, 500);
   return json({ devices: data, me: admin!.id });
 }
 
@@ -237,7 +237,7 @@ async function revoke(request: Request) {
   if (id === admin!.id) return json({ error: "cannot_revoke_self" }, 400);
   const db = await getAdmin();
   const { error } = await db.from("app_devices").update({ active: false }).eq("id", id);
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: "server_error" }, 500);
   return json({ ok: true });
 }
 
@@ -255,6 +255,6 @@ async function changePin(request: Request) {
     .from("app_admin_config")
     .update({ pin_hash: sha256(newPin), updated_at: new Date().toISOString() })
     .eq("id", 1);
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: "server_error" }, 500);
   return json({ ok: true });
 }
