@@ -195,6 +195,38 @@ export const Route = createFileRoute("/api/ai-plan")({
           );
         }
 
+        if (mode === "report") {
+          const history = payload.history || {};
+          const days = Number(payload.days || 7);
+          const system = [
+            "Sen shaxsiy kun tartibi tahlilchisisan. Foydalanuvchi Marg'ilon shahrida, namoz o'qiydi.",
+            `Oxirgi ${days} kunlik ma'lumotni tahlil qil.`,
+            "Formatda javob ber (Markdown):",
+            "**📊 Umumiy foiz:** N%",
+            "**🔥 Streak:** N kun",
+            "**✅ Yaxshi tomonlar:** 2-3 ta konkret kuzatuv",
+            "**⚠️ E'tibor bering:** 2-3 ta shaxsiy kuzatuv",
+            "**💡 Tavsiyalar:** 2-3 ta amaliy maslahat",
+            "Iliq, do'stona, hukm qilmaydigan uslubda yoz. Maksimum 200 so'z.",
+          ].join("\n");
+          const r = await callGateway(
+            [
+              { role: "system", content: system },
+              { role: "user", content: JSON.stringify(history).slice(0, 6000) },
+            ],
+            apiKey,
+          );
+          if (!r.ok) {
+            return new Response(JSON.stringify({ error: "AI xatoligi", status: r.status }), {
+              status: 502, headers: { "Content-Type": "application/json" },
+            });
+          }
+          return new Response(
+            JSON.stringify({ ok: true, content: r.content }),
+            { headers: { "Content-Type": "application/json" } },
+          );
+        }
+
         return new Response(JSON.stringify({ error: "Noma'lum rejim" }), {
           status: 400, headers: { "Content-Type": "application/json" },
         });
