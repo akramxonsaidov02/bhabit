@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="uz" data-theme="dark">
 <head>
-<meta charset="UTF-8">
 <script src="/gate-check.js"></script>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/kt-cloud.js" defer></script>
+<script src="/kt-extras.js" defer></script>
 <style>
 /* ═══════════════════════════════════════
    CSS VARIABLES
@@ -300,6 +301,30 @@ body::before {
 .next-p { margin-top:10px; padding:8px 12px; background:rgba(var(--accent-rgb),.08); border:1px solid rgba(var(--accent-rgb),.15); border-radius:10px; font-size:12px; color:var(--tx2); }
 .next-p strong { color:var(--accent); font-weight:600; }
 .p-src { font-size:10px; color:var(--tx3); margin-top:5px; }
+.week-strip { display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:10px; }
+.week-day { border:1px solid var(--bdr); background:var(--glass-bg); color:var(--tx2); border-radius:10px; padding:7px 2px; font:inherit; cursor:pointer; }
+.week-day strong { display:block; color:var(--tx); font-size:12px; }
+.week-day.on { border-color:rgba(var(--accent-rgb),.35); background:rgba(var(--accent-rgb),.13); color:var(--accent); }
+.week-day:disabled { opacity:.35; cursor:not-allowed; }
+.viewer-badge { display:none; position:fixed; left:12px; right:12px; top:58px; z-index:650; border:1px solid rgba(245,158,11,.35); background:rgba(245,158,11,.12); color:var(--amber); border-radius:12px; padding:8px 12px; font-size:12px; font-weight:700; text-align:center; backdrop-filter:var(--blur); }
+.viewer-mode .viewer-badge { display:block; }
+.tool-panel { border-radius:var(--r3); padding:16px; margin-bottom:10px; background:var(--glass-bg); border:1px solid var(--glass-bd); box-shadow:var(--glass-sh); }
+.tool-title { font-size:15px; font-weight:800; margin-bottom:8px; }
+.tool-sub { font-size:12px; color:var(--tx2); line-height:1.55; margin-bottom:12px; }
+.tool-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.tool-actions button { border:none; border-radius:12px; padding:10px 12px; background:rgba(var(--accent-rgb),.14); color:var(--accent); font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.qibla-stage { position:relative; min-height:340px; overflow:hidden; border-radius:var(--r3); background:#030712; margin-top:10px; }
+.qibla-stage video,.qibla-stage canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.qibla-info { position:absolute; left:12px; right:12px; top:12px; z-index:2; display:flex; gap:8px; justify-content:space-between; font-size:12px; font-weight:700; }
+.qibla-pill { padding:7px 10px; border-radius:999px; background:rgba(0,0,0,.45); color:#fff; backdrop-filter:blur(12px); }
+.breath-wrap { min-height:360px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; }
+.breath-circle { width:170px; height:170px; border-radius:50%; background:radial-gradient(circle,rgba(var(--accent-rgb),.45),rgba(var(--accent-rgb),.08)); border:1px solid rgba(var(--accent-rgb),.35); box-shadow:0 0 45px rgba(var(--accent-rgb),.25); transform:scale(.78); transition:transform 1s linear; }
+.breath-circle.in { transform:scale(1.22); }
+.breath-circle.hold { transform:scale(1.22); }
+.breath-circle.out { transform:scale(.78); }
+.metric-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px; }
+.metric { background:rgba(255,255,255,.06); border:1px solid var(--bdr); border-radius:12px; padding:10px; text-align:center; }
+.metric b { display:block; color:var(--accent); font-size:18px; }
 
 /* ── FILTER BAR ── */
 .filter-bar {
@@ -409,17 +434,6 @@ body::before {
 }
 .fab:hover { transform:translateY(-2px) scale(1.05); box-shadow:0 12px 32px rgba(var(--accent-rgb),.5); }
 .fab:active { transform:scale(.92); }
-.fab.voice {
-  right:76px; background:linear-gradient(145deg,#8b5cf6,#ec4899);
-  box-shadow:0 6px 24px rgba(139,92,246,.4), inset 0 1px 0 rgba(255,255,255,.2);
-  font-size:22px;
-}
-.fab.voice.active {
-  animation:voicePulse 1.2s ease-in-out infinite;
-  background:linear-gradient(145deg,#ef4444,#f97316);
-  box-shadow:0 6px 30px rgba(239,68,68,.6), inset 0 1px 0 rgba(255,255,255,.25);
-}
-@keyframes voicePulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
 
 /* ── BOTTOM NAV ── */
 .bnav {
@@ -731,7 +745,18 @@ body::before {
         <div class="pp" id="pp-isha"><div class="pp-n">Xufton</div><div class="pp-t sk" id="pt-isha" style="height:15px;width:36px;margin:4px auto 0"></div></div>
       </div>
       <div class="next-p" id="nextP">Yuklanmoqda…</div>
+      <div class="week-strip" id="weekStrip"></div>
       <div class="p-src" id="pSrc"></div>
+    </div>
+
+    <div class="tool-panel" id="smartToolsPanel">
+      <div class="tool-title">Aqlli kun yordamchilari</div>
+      <div class="tool-sub">Qibla, nafas mashqi va harakatdan avto-aniqlash sozlamadan boshqariladi.</div>
+      <div class="tool-actions">
+        <button id="qiblaBtn" onclick="openQibla()">🧭 Qibla</button>
+        <button id="breathBtn" onclick="openBreath()">🫁 Nafas</button>
+        <button id="motionBtn" onclick="openMotionTracker()">🏃 Harakat</button>
+      </div>
     </div>
 
     <!-- Filter bar -->
@@ -759,7 +784,6 @@ body::before {
       <button onclick="openCoach()" class="ripple-host" style="flex:1;padding:10px;border-radius:var(--r);border:1px solid rgba(var(--Ar),.25);background:rgba(var(--Ar),.1);color:var(--A);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer">🤖 Murabbiy</button>
     </div>
     <div id="statsContent"></div>
-  <button class="fab voice" id="voiceBtn" onclick="toggleVoice()" title="Ovozli buyruq">🎤</button>
   <button class="fab" onclick="openAdd()">＋</button>
 
   <div class="bnav">
@@ -796,6 +820,16 @@ body::before {
         <option value="night">🌙 Kechasi</option>
       </select>
     </div>
+    <div class="frow">
+      <label>Avto-aniqlash</label>
+      <select class="fi" id="fDetect">
+        <option value="none">Yo‘q</option>
+        <option value="walk">Yurish — qadam</option>
+        <option value="run">Yugurish — GPS + tezlik</option>
+        <option value="bike">Velosiped — GPS tezlik</option>
+        <option value="sleep">Uxlash — sokin vaqt</option>
+      </select>
+    </div>
     <div class="frow"><label>Izoh</label><input class="fi" id="fNote" placeholder="Ixtiyoriy..."></div>
     <div class="btn-row">
       <button class="bc" onclick="closeOv('ovTask')">Bekor</button>
@@ -803,6 +837,56 @@ body::before {
       <button class="bdef" id="fDefer" onclick="deferTask()" style="display:none">⏳</button>
       <button class="bs" onclick="saveTask()">Saqlash</button>
     </div>
+  </div>
+</div>
+
+<div class="viewer-badge" id="viewerBadge">👁 Ko‘ruvchi rejim — o‘zgarishlar bu qurilmada ko‘rinadi, bazaga saqlanmaydi</div>
+
+<!-- QIBLA MODAL -->
+<div class="ov" id="qiblaOv">
+  <div class="sh">
+    <div class="sh-handle"></div>
+    <div class="sh-title">🧭 AR Qibla ko‘rsatkichi</div>
+    <div class="qibla-stage">
+      <video id="qiblaVideo" playsinline muted></video>
+      <canvas id="qiblaCanvas"></canvas>
+      <div class="qibla-info"><span class="qibla-pill" id="qiblaDeg">--°</span><span class="qibla-pill" id="qiblaStatus">Joylashuv kutilmoqda</span></div>
+    </div>
+    <div class="btn-row"><button class="bc" onclick="closeQibla()">Yopish</button><button class="bs" onclick="startQibla()">Boshlash</button></div>
+  </div>
+</div>
+
+<!-- BREATH MODAL -->
+<div class="ov" id="breathOv">
+  <div class="sh">
+    <div class="sh-handle"></div>
+    <div class="sh-title">🫁 Nafas olish mashqi</div>
+    <div class="tool-actions" style="margin-bottom:10px">
+      <button onclick="setBreathMode('478')">4-7-8</button>
+      <button onclick="setBreathMode('box')">Box</button>
+      <button onclick="setBreathMode('deep')">Deep</button>
+    </div>
+    <div class="breath-wrap">
+      <div class="breath-circle" id="breathCircle"></div>
+      <div style="font-size:24px;font-weight:900" id="breathText">Tayyor</div>
+      <div style="font-size:13px;color:var(--tx2)" id="breathCycle">3 sikl</div>
+    </div>
+    <div class="btn-row"><button class="bc" onclick="closeBreath()">Yopish</button><button class="bs" onclick="startBreath()">Boshlash</button></div>
+  </div>
+</div>
+
+<!-- MOTION MODAL -->
+<div class="ov" id="motionOv">
+  <div class="sh">
+    <div class="sh-handle"></div>
+    <div class="sh-title">🏃 Harakatdan avto-aniqlash</div>
+    <div class="tool-sub">Telefon sensori va GPS orqali yurish/yugurish vazifalarini aniqlaydi. Shart bajarilsa bugungi mos vazifa avtomatik belgilanadi.</div>
+    <div class="metric-grid">
+      <div class="metric"><b id="stepCount">0</b><span>qadam</span></div>
+      <div class="metric"><b id="distanceKm">0.00</b><span>km</span></div>
+      <div class="metric"><b id="speedKmh">0.0</b><span>km/soat</span></div>
+    </div>
+    <div class="btn-row"><button class="bc" onclick="stopMotionTracker();closeOv('motionOv')">Yopish</button><button class="bs" onclick="startMotionTracker()">Boshlash</button></div>
   </div>
 </div>
 
@@ -959,6 +1043,10 @@ let pinSetupInput = '', pinLockInput = '', pinSetupStep = 1, pinSetupFirst = '';
 let aiTimer = null;
 
 function persist(){
+  if(window.KTCloud && window.KTCloud.isViewer && window.KTCloud.isViewer()){
+    try{ sessionStorage.setItem('kt5_viewer_session',JSON.stringify(S)); }catch(e){}
+    return;
+  }
   try{ localStorage.setItem('kt5',JSON.stringify(S)); }catch(e){}
   // Push settings to cloud (throttled, non-blocking)
   if(window.KTCloud && window.KTCloud.isReady && window.KTCloud.isReady()){
@@ -969,8 +1057,15 @@ function persist(){
 function hydrate(){
   try{ const r=localStorage.getItem('kt5'); if(r){const p=JSON.parse(r);S=Object.assign({},S,p);} }catch(e){}
   if(!S.tasks||!S.tasks.length) S.tasks=DEFTASKS.map(t=>({...t,done:false,autoChecked:false,deferred:false}));
+  S.tasks=S.tasks.map((t,i)=>({...t,order:t.order??i,autoDetectType:t.autoDetectType||'none'}));
   if(!S.activityLog) S.activityLog=[];
   if(!S.dayHistory) S.dayHistory={};
+  if(!S.selectedDate) S.selectedDate=todayKey();
+  if(S.showQibla===undefined) S.showQibla=true;
+  if(S.showBreath===undefined) S.showBreath=true;
+  if(S.showMotionDetect===undefined) S.showMotionDetect=true;
+  if(S.autoShiftDayStart===undefined) S.autoShiftDayStart=true;
+  if(S.autoShiftPrayer===undefined) S.autoShiftPrayer=true;
   checkDailyReset();
 }
 
@@ -1119,18 +1214,24 @@ function doLogin(){
   if(found&&found.pass===p){
     document.getElementById('lerr').textContent='';
     hydrate();
-    if(found.role==='admin'){
-      document.getElementById('lockScreen').style.display='none';
-      document.getElementById('adminPanel').style.display='block';
-      renderAdmTasks(); document.getElementById('admName').value=S.appName;
-    } else {
-      if(!S.pinSetupDone){ showPinSetup(); }
-      else { enterApp(); }
-    }
+    // Admin ham endi to'g'ridan-to'g'ri asosiy ilovaga kiradi.
+    // Admin panelga sozlamalar orqali "⚙️ Admin panel" tugmasi bilan o'tiladi.
+    S.isAdmin = (found.role==='admin');
+    try{ persist(); }catch(e){}
+    if(!S.pinSetupDone){ showPinSetup(); }
+    else { enterApp(); }
   } else {
     document.getElementById('lerr').textContent='Login yoki parol noto\'g\'ri';
     document.getElementById('lp').value='';
   }
+}
+// Sozlamalardan chaqiriladi: admin panelni ochish
+function openAdminPanel(){
+  if(!S.isAdmin){ toast('❌ Faqat admin uchun'); return; }
+  try{ closeSettings(); }catch(e){}
+  document.getElementById('adminPanel').style.display='block';
+  renderAdmTasks();
+  const n=document.getElementById('admName'); if(n) n.value=S.appName||'Kun Tartibim';
 }
 
 function enterApp(){
@@ -1162,6 +1263,7 @@ function updateTopbar(){
   document.getElementById('appTitle').textContent=S.appName||'Kun Tartibim';
   document.getElementById('topDate').textContent=`${days[n.getDay()]}, ${n.getDate()} ${months[n.getMonth()]} ${n.getFullYear()}`;
   document.title=S.appName||'Kun Tartibim';
+  renderWeekStrip();
 }
 
 // ═══════════════════════════════════════
@@ -1228,6 +1330,28 @@ function renderPrayers(){
   let cur=-1; for(let i=mins.length-1;i>=0;i--){if(nm>=mins[i]){cur=i;break;}}
   if(cur>=0) document.getElementById('pp-'+keys[cur]).classList.add('cur');
   updateNextP();
+  renderWeekStrip();
+}
+
+function renderWeekStrip(){
+  const el=document.getElementById('weekStrip'); if(!el) return;
+  const names=['Du','Se','Ch','Pa','Ju','Sh','Ya'];
+  const now=new Date();
+  const monday=new Date(now); monday.setDate(now.getDate()-((now.getDay()+6)%7));
+  const today=todayKey();
+  const selected=S.selectedDate||today;
+  el.innerHTML=names.map((name,i)=>{
+    const d=new Date(monday); d.setDate(monday.getDate()+i);
+    const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const future=k>today;
+    return `<button class="week-day ${k===selected?'on':''}" ${future?'disabled':''} onclick="selectDay('${k}')"><span>${name}</span><strong>${d.getDate()}</strong></button>`;
+  }).join('');
+}
+function selectDay(k){
+  if(k>todayKey()){ toast('Kelasi kunlar hali yopiq'); return; }
+  S.selectedDate=k; persist(); renderWeekStrip();
+  if(k===todayKey()) toast('Bugungi kun');
+  else showDayDetail(k);
 }
 function updateNextP(){
   const p=S.prayers;
@@ -1254,6 +1378,7 @@ function savePrayers(){
 //  SCHEDULE
 // ═══════════════════════════════════════
 function autoCheck(){
+  if(S.autoCheckMorn===false) return;
   const nm=new Date().getHours()*60+new Date().getMinutes();
   S.tasks.forEach(t=>{
     if(t.autoChecked||t.deferred)return;
@@ -1266,6 +1391,11 @@ function autoCheck(){
 }
 
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s){ return esc(s).replace(/'/g,'&#39;'); }
+function sameId(a,b){ return String(a)===String(b); }
+function taskById(id){ return S.tasks.find(x=>sameId(x.id,id)||sameId(x.cloudId,id)); }
+function taskIndexById(id){ return S.tasks.findIndex(x=>sameId(x.id,id)||sameId(x.cloudId,id)); }
+function taskIdArg(id){ return JSON.stringify(String(id)); }
 
 function getFilteredTasks(){
   let tasks=[...S.tasks];
@@ -1320,14 +1450,17 @@ function taskHtml(t,i){
   const tags=[];
   if(t.autoChecked) tags.push('<span class="tc-tag tag-auto">Avto</span>');
   if(t.deferred)    tags.push('<span class="tc-tag tag-deferred">Kechiktirildi</span>');
+  if(t.autoDetectType&&t.autoDetectType!=='none') tags.push('<span class="tc-tag tag-auto">Sensor</span>');
+  if(t.splitParentId) tags.push('<span class="tc-tag tag-priority">Bo‘lingan</span>');
   const dragH=editMode?'<div class="drag-handle" draggable="true">⠿</div>':'';
   const checkContent=t.done?'✓':t.deferred?'⏳':'';
+  const tid=taskIdArg(t.id);
   return `
-<div class="tc ${dc} ${defc} cat-${t.cat||'other'}" id="tc${t.id}" style="${delayAnim}" draggable="${editMode}" ondragstart="dragStart(event,'${t.id}')" ondragover="dragOver(event)" ondrop="drop(event,'${t.id}')">
+<div class="tc ${dc} ${defc} cat-${t.cat||'other'}" id="tc-${escAttr(t.id)}" style="${delayAnim}" draggable="${editMode}" ondragstart="dragStart(event,${tid})" ondragover="dragOver(event)" ondrop="drop(event,${tid})">
   ${dragH}
   <div class="tc-bar"></div>
   <div class="tc-inner">
-    <div class="tc-check" onclick="toggleTask('${t.id}')">${checkContent}</div>
+    <div class="tc-check" onclick="toggleTask(${tid})">${checkContent}</div>
     <div class="tc-time">${esc(timeStr)}</div>
     <div class="tc-body">
       <div class="tc-body-name">${esc(t.name)}</div>
@@ -1336,9 +1469,9 @@ function taskHtml(t,i){
     </div>
   </div>
   <div class="tc-actions">
-    <button class="ta-b" onclick="openEdit('${t.id}')">✎</button>
-    <button class="ta-b defer" onclick="toggleDefer('${t.id}')">⏳</button>
-    <button class="ta-b del" onclick="confirmDeleteTask('${t.id}')">✕</button>
+    <button class="ta-b" onclick="openEdit(${tid})">✎</button>
+    <button class="ta-b defer" onclick="toggleDefer(${tid})">⏳</button>
+    <button class="ta-b del" onclick="confirmDeleteTask(${tid})">✕</button>
   </div>
 </div>`;
 }
@@ -1355,9 +1488,10 @@ function updateProgress(){
 }
 
 function toggleDefer(id){
-  const t=S.tasks.find(x=>String(x.id)===String(id)); if(!t)return;
+  const t=taskById(id); if(!t)return;
   t.deferred=!t.deferred; if(t.deferred){t.done=false;t.autoChecked=false;}
   persist(); renderSchedule(); toast(t.deferred?'⏳ Kechiktirildi':'↩️ Kechiktirishdan olindi');
+  if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.saveTaskCompletion(t,t.done);
 }
 
 // ── FILTER ──
@@ -1380,7 +1514,7 @@ function toggleEditMode(){
 // ── INLINE EDIT ──
 function inlineEdit(id,field,el){
   if(!editMode)return;
-  const t=S.tasks.find(x=>String(x.id)===String(id)); if(!t)return;
+  const t=taskById(id); if(!t)return;
   const old=el.textContent;
   el.contentEditable=true; el.focus();
   el.addEventListener('blur',()=>{ t[field]=el.textContent.trim()||old; el.contentEditable=false; persist(); },{once:true});
@@ -1393,12 +1527,14 @@ function dragStart(e,id){ dragId=id; e.dataTransfer.effectAllowed='move'; }
 function dragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; }
 function drop(e,targetId){
   e.preventDefault(); if(dragId===targetId)return;
-  const from=S.tasks.findIndex(x=>String(x.id)===String(dragId));
-  const to=S.tasks.findIndex(x=>String(x.id)===String(targetId));
+  const from=taskIndexById(dragId);
+  const to=taskIndexById(targetId);
   if(from<0||to<0)return;
   const [item]=S.tasks.splice(from,1);
   S.tasks.splice(to,0,item);
+  S.tasks.forEach((t,i)=>t.order=i);
   persist(); renderSchedule();
+  if(window.KTCloud&&window.KTCloud.syncTasks) window.KTCloud.syncTasks(S.tasks);
 }
 
 // ── TASK CRUD ──
@@ -1408,13 +1544,14 @@ function openAdd(){
   ['fName','fNote'].forEach(i=>document.getElementById(i).value='');
   ['fStart','fEnd'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('fCat').value='other';
+  const detect=document.getElementById('fDetect'); if(detect) detect.value='none';
   document.getElementById('fDel').style.display='none';
   document.getElementById('fDefer').style.display='none';
   document.getElementById('aiSug').classList.remove('show');
   openOv('ovTask');
 }
 function openEdit(id){
-  const t=S.tasks.find(x=>String(x.id)===String(id)); if(!t)return;
+  const t=taskById(id); if(!t)return;
   editId=id;
   document.getElementById('taskTitle').textContent='Vazifani tahrirlash';
   document.getElementById('fName').value=t.name;
@@ -1422,6 +1559,7 @@ function openEdit(id){
   document.getElementById('fEnd').value=t.end||'';
   document.getElementById('fCat').value=t.cat||'other';
   document.getElementById('fNote').value=t.note||'';
+  const detect=document.getElementById('fDetect'); if(detect) detect.value=t.autoDetectType||'none';
   document.getElementById('fDel').style.display='inline-flex';
   document.getElementById('fDefer').style.display='inline-flex';
   document.getElementById('aiSug').classList.remove('show');
@@ -1445,7 +1583,7 @@ async function runAiSuggest(name){
   try{
     const res=await fetch('/api/ai-plan',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-device-token':(localStorage.getItem('bh_device_token')||'')},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         mode:'suggest',
         name,
@@ -1488,7 +1626,7 @@ function findConflicts(skipId,ns,ne){
   if(!ns) return [];
   const nsm=t2m(ns), nem=ne?t2m(ne):nsm+30;
   return S.tasks.filter(t=>{
-    if(t.id===skipId||!t.start) return false;
+    if(sameId(t.id,skipId)||!t.start) return false;
     const ts=t2m(t.start), te=t.end?t2m(t.end):ts+30;
     return !(nem<=ts||nsm>=te);
   });
@@ -1504,7 +1642,7 @@ function cascadeShift(){
     const prevEnd=t2m(prev.end), curStart=t2m(t.start);
     if(curStart<prevEnd){
       const dur=t.end?t2m(t.end)-curStart:30;
-      const real=S.tasks.find(x=>String(x.id)===String(t.id));
+        const real=taskById(t.id);
       if(real){
         real.start=m2t(prevEnd);
         if(real.end) real.end=m2t(prevEnd+dur);
@@ -1525,11 +1663,12 @@ function saveTask(){
   const newEnd=document.getElementById('fEnd').value;
   const newCat=document.getElementById('fCat').value;
   const newNote=document.getElementById('fNote').value;
+  const newDetect=document.getElementById('fDetect')?.value||'none';
   if(editId){
-    const t=S.tasks.find(x=>String(x.id)===String(editId));
+    const t=taskById(editId);
     if(!t) return;
     const oldStart=t.start, oldEnd=t.end;
-    t.name=name; t.start=newStart; t.end=newEnd; t.cat=newCat; t.note=newNote;
+    t.name=name; t.start=newStart; t.end=newEnd; t.cat=newCat; t.note=newNote; t.autoDetectType=newDetect;
     persist(); closeOv('ovTask'); renderSchedule();
     if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.pushTaskChange(t);
     toast('✏️ Yangilandi');
@@ -1551,23 +1690,26 @@ function saveTask(){
     }
   } else {
     const nt={id:Date.now(),name,done:false,autoChecked:false,deferred:false,
-      start:newStart,end:newEnd,cat:newCat,note:newNote};
+      start:newStart,end:newEnd,cat:newCat,note:newNote,autoDetectType:newDetect,priority:newCat==='work'?'orta':'past'};
+    const conflicts=findConflicts(null,newStart,newEnd);
+    if(conflicts.length>0 && (newCat==='work'||newCat==='medicine'||newCat==='prayer')){
+      splitConflictsForImportant(nt,conflicts);
+    }
     S.tasks.push(nt);
     persist(); closeOv('ovTask'); renderSchedule(); toast('➕ Qo\'shildi');
     if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.pushTaskChange(nt);
-    const conflicts=findConflicts(null,newStart,newEnd);
     if(conflicts.length>0) toast('⚠️ '+conflicts.length+' ta vazifa bilan vaqt kesishmasi bor');
   }
   if(S.notifOn) scheduleAllNotifications();
 }
 function delTask(){
-  const t=S.tasks.find(x=>String(x.id)===String(editId));
-  S.tasks=S.tasks.filter(x=>x.id!==editId);
+  const t=taskById(editId);
+  S.tasks=S.tasks.filter(x=>!sameId(x.id,editId));
   persist(); closeOv('ovTask'); renderSchedule(); toast('🗑️ O\'chirildi');
   if(t && window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.deleteTaskCloud(t);
 }
 function deferTask(){
-  const t=S.tasks.find(x=>String(x.id)===String(editId)); if(!t)return;
+  const t=taskById(editId); if(!t)return;
   t.deferred=!t.deferred; if(t.deferred){t.done=false;t.autoChecked=false;}
   persist(); closeOv('ovTask'); renderSchedule();
   toast(t.deferred?'⏳ Kechiktirildi':'↩️ Kechiktirishdan olindi');
@@ -1575,7 +1717,9 @@ function deferTask(){
 
 function confirmDeleteTask(id){
   showConfirm('Vazifani o\'chirish','Ushbu vazifani o\'chirmoqchimisiz?',()=>{
-    S.tasks=S.tasks.filter(x=>x.id!==id); persist(); renderSchedule(); toast('🗑️ O\'chirildi');
+    const t=taskById(id);
+    S.tasks=S.tasks.filter(x=>!sameId(x.id,id)); persist(); renderSchedule(); toast('🗑️ O\'chirildi');
+    if(t && window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.deleteTaskCloud(t);
   });
 }
 
@@ -1672,20 +1816,23 @@ function confirmLogout(){
 
 // ── ADMIN ──
 function closeAdmin(){
+  // Admin panel yopilganda asosiy ilovaga qaytadi (login ekraniga emas)
   document.getElementById('adminPanel').style.display='none';
-  document.getElementById('lockScreen').style.display='flex';
-  showLogin();
+  const app=document.getElementById('app');
+  if(app && app.style.display!=='block'){ app.style.display='block'; try{ initApp(); }catch(e){} }
 }
 function renderAdmTasks(){
   document.getElementById('admTasks').innerHTML=S.tasks.map(t=>`
 <div class="adm-task-row">
-  <input value="${esc(t.name)}" onchange="S.tasks.find(x=>String(x.id)===String('${t.id}')).name=this.value">
-  <input type="time" value="${t.start||''}" style="width:88px;flex:0" onchange="S.tasks.find(x=>String(x.id)===String('${t.id}')).start=this.value">
-  <input type="time" value="${t.end||''}" style="width:88px;flex:0" onchange="S.tasks.find(x=>String(x.id)===String('${t.id}')).end=this.value">
-  <button class="adm-x" onclick="S.tasks=S.tasks.filter(x=>x.id!=='${t.id}');renderAdmTasks()">✕</button>
+  <input value="${esc(t.name)}" onchange="updateAdminTask(${taskIdArg(t.id)},'name',this.value)">
+  <input type="time" value="${t.start||''}" style="width:88px;flex:0" onchange="updateAdminTask(${taskIdArg(t.id)},'start',this.value)">
+  <input type="time" value="${t.end||''}" style="width:88px;flex:0" onchange="updateAdminTask(${taskIdArg(t.id)},'end',this.value)">
+  <button class="adm-x" onclick="deleteAdminTask(${taskIdArg(t.id)})">✕</button>
 </div>`).join('');
 }
-function saveAdmTasks(){ persist(); toast('✅ Saqlandi'); }
+function updateAdminTask(id,field,value){ const t=taskById(id); if(t){ t[field]=value; } }
+function deleteAdminTask(id){ S.tasks=S.tasks.filter(x=>!sameId(x.id,id)); renderAdmTasks(); }
+function saveAdmTasks(){ persist(); if(window.KTCloud&&window.KTCloud.syncTasks) window.KTCloud.syncTasks(S.tasks); toast('✅ Saqlandi'); }
 function saveAdmMeta(){ S.appName=document.getElementById('admName').value.trim()||'Kun Tartibim'; persist(); toast('✅ Saqlandi'); }
 
 // ── TOAST ──
@@ -2004,163 +2151,60 @@ async function tryBiometric(){
 function base64ToArray(b64){ return Uint8Array.from(atob(b64),c=>c.charCodeAt(0)); }
 
 // ══════════════════════════════════════
-//  VOICE COMMANDS — Lovable AI STT (o'zbek, cheksiz, aniq)
+//  VOICE COMMANDS
 // ══════════════════════════════════════
-let voiceActive=false, voiceRec=null, voiceStream=null, voiceChunks=[], voiceMime='audio/webm', voiceBusy=false;
-
-function pickMime(){
-  const cands=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/mpeg','audio/ogg'];
-  if(!window.MediaRecorder) return null;
-  for(const m of cands){ try{ if(MediaRecorder.isTypeSupported(m)) return m; }catch{} }
-  return '';
-}
-
-async function startVoiceRec(){
-  if(voiceBusy){ toast('⏳ Kuting...'); return; }
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){
-    toast('⚠️ Bu brauzer ovoz yozishni qo\'llamaydi'); return;
-  }
-  if(window.__BH_VIEWER__){ toast('👁 Viewer rejimida ovozli buyruq o\'chirilgan'); return; }
-  try{
-    voiceStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
-  }catch(e){
-    toast('🎤 Mikrofonga ruxsat berilmadi'); return;
-  }
-  const mime=pickMime();
-  try{
-    voiceRec=mime?new MediaRecorder(voiceStream,{mimeType:mime}):new MediaRecorder(voiceStream);
-  }catch(e){
-    voiceRec=new MediaRecorder(voiceStream);
-  }
-  voiceMime=voiceRec.mimeType||mime||'audio/webm';
-  voiceChunks=[];
-  voiceRec.ondataavailable=e=>{ if(e.data&&e.data.size>0) voiceChunks.push(e.data); };
-  voiceRec.onstop=async()=>{
-    try{ voiceStream.getTracks().forEach(t=>t.stop()); }catch{}
-    voiceStream=null;
-    const blob=new Blob(voiceChunks,{type:voiceMime});
-    voiceChunks=[];
-    voiceActive=false; updateVoiceBtn();
-    if(blob.size<1024){ toast('🎤 Yozuv juda qisqa'); return; }
-    await sendVoiceBlob(blob);
+let voiceActive=false, voiceRecog=null;
+function initVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ toast('⚠️ Ovozli buyruq bu brauzerda ishlamaydi'); return; }
+  voiceRecog=new SR();
+  voiceRecog.lang='uz-UZ';
+  voiceRecog.continuous=false;
+  voiceRecog.interimResults=false;
+  voiceRecog.onresult=e=>{
+    const cmd=e.results[0][0].transcript.toLowerCase().trim();
+    processVoiceCmd(cmd);
   };
-  voiceRec.start(); // bir bo'lak — start/stop tugagach to'liq fayl
-  voiceActive=true; haptic('medium'); toast('🎤 Gapiring... (tugatish uchun yana bosing)');
+  voiceRecog.onerror=()=>{ voiceActive=false; updateVoiceBtn(); };
+  voiceRecog.onend=()=>{ voiceActive=false; updateVoiceBtn(); };
+}
+function toggleVoice(){
+  if(!voiceRecog) initVoice();
+  if(!voiceRecog) return;
+  if(voiceActive){ voiceRecog.stop(); voiceActive=false; }
+  else{ voiceRecog.start(); voiceActive=true; haptic('medium'); toast('🎤 Gapiring...'); }
   updateVoiceBtn();
 }
-
-function stopVoiceRec(){
-  if(!voiceRec) return;
-  try{ voiceRec.stop(); }catch{}
-  voiceRec=null;
-}
-
-function toggleVoice(){
-  if(voiceActive) stopVoiceRec();
-  else startVoiceRec();
-}
-
 function updateVoiceBtn(){
   const btn=document.getElementById('voiceBtn');
-  if(!btn) return;
-  if(voiceBusy){ btn.textContent='⏳'; btn.classList.remove('active'); return; }
-  btn.textContent=voiceActive?'🔴':'🎤';
-  btn.classList.toggle('active',voiceActive);
+  if(btn){ btn.textContent=voiceActive?'🔴':'🎤'; btn.classList.toggle('active',voiceActive); }
 }
-
-async function sendVoiceBlob(blob){
-  voiceBusy=true; updateVoiceBtn();
-  toast('🧠 Tinglayapman...');
-  try{
-    const fd=new FormData();
-    const ext=(voiceMime.includes('mp4')?'mp4':voiceMime.includes('mpeg')?'mp3':voiceMime.includes('ogg')?'ogg':'webm');
-    fd.append('file',blob,'voice.'+ext);
-    const tr=await fetch('/api/voice-transcribe',{method:'POST',body:fd});
-    const trData=await tr.json().catch(()=>({}));
-    if(!tr.ok||!trData.ok||!trData.text){
-      toast('❌ Ovozni tanib bo\'lmadi'); return;
+function processVoiceCmd(cmd){
+  haptic('light');
+  // Namoz tasdiqlash
+  const prayerNames={bomdod:'fajr',peshin:'dhuhr',asr:'asr',shom:'maghrib',xufton:'isha'};
+  for(const [name,key] of Object.entries(prayerNames)){
+    if(cmd.includes(name)&&(cmd.includes('bajardim')||cmd.includes('o’qidim')||cmd.includes('tugadi'))){
+      const task=S.tasks.find(t=>t.name.toLowerCase().includes(name)&&!t.done);
+      if(task){toggleTask(task.id);toast(`✅ ${task.name} belgilandi`);return;}
     }
-    const text=String(trData.text||'').trim();
-    toast('💬 "'+text.slice(0,60)+(text.length>60?'…':'')+'"');
-    await runVoiceCommand(text);
-  }catch(e){
-    toast('❌ Xatolik: '+(e&&e.message||'noma\'lum'));
-  }finally{
-    voiceBusy=false; updateVoiceBtn();
   }
-}
-
-async function runVoiceCommand(text){
-  const res=await fetch('/api/ai-plan',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','x-device-token':(localStorage.getItem('bh_device_token')||'')},
-    body:JSON.stringify({
-      mode:'voice',
-      text,
-      now:new Date().toISOString(),
-      dayStart:S.dayStart||'06:30',
-      sleep:S.sleep||S.sleepTime||'22:30',
-      prayers:S.prayers||{},
-      tasks:(S.tasks||[]).map(t=>({id:t.id,name:t.name,start:t.start,end:t.end,done:!!t.done})),
-    }),
-  });
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok||!data.ok){ toast('❌ AI javob bermadi'); return; }
-  const raw=String(data.content||'').replace(/```json?|```/g,'').trim();
-  let cmd=null;
-  try{ cmd=JSON.parse(raw); }catch{ toast('❌ AI javobi tushunarsiz'); return; }
-  await executeVoiceAction(cmd);
-}
-
-async function executeVoiceAction(cmd){
-  if(!cmd||!cmd.action){ toast('🤔 Buyruq tushunilmadi'); return; }
-  const reply=cmd.reply||'';
-  if(cmd.action==='add'&&cmd.task&&cmd.task.name){
-    const j=cmd.task;
-    const nt={
-      id:Date.now(),
-      name:String(j.name).trim(),
-      done:false, autoChecked:false, deferred:false,
-      start:j.start||'', end:j.end||'',
-      cat:j.category||'other',
-      note:j.note||'',
-    };
-    S.tasks.push(nt);
-    persist(); renderSchedule();
-    if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.pushTaskChange(nt);
-    toast('➕ '+(reply||('Qo\'shildi: '+nt.name)));
-    haptic('success');
-    return;
+  // Umumiy vazifa
+  const doneWords=['bajardim','qildim','tugadi','bo’ldi'];
+  const hasDone=doneWords.some(w=>cmd.includes(w));
+  if(hasDone){
+    const task=S.tasks.find(t=>!t.done&&cmd.includes(t.name.toLowerCase().split(' ')[0]));
+    if(task){toggleTask(task.id);toast(`✅ "${task.name}" belgilandi`);return;}
   }
-  if(cmd.action==='complete'||cmd.action==='uncomplete'){
-    const t=findVoiceTarget(cmd);
-    if(!t){ toast('🤔 Mos vazifa topilmadi'); return; }
-    const want=cmd.action==='complete';
-    if(!!t.done!==want) toggleTask(t.id);
-    toast((want?'✅ ':'↩️ ')+(reply||t.name));
-    haptic('success');
-    return;
+  // Qo’shish
+  if(cmd.includes('qo’sh')||cmd.includes('yangi')){
+    openAdd(); toast('➕ Yangi vazifa'); return;
   }
-  if(cmd.action==='delete'){
-    const t=findVoiceTarget(cmd);
-    if(!t){ toast('🤔 Mos vazifa topilmadi'); return; }
-    S.tasks=S.tasks.filter(x=>String(x.id)!==String(t.id));
-    persist(); renderSchedule();
-    if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.deleteTaskCloud(t);
-    toast('🗑️ '+(reply||t.name));
-    return;
+  // Focus
+  if(cmd.includes('focus')||cmd.includes('boshlash')){
+    openFocusMode(); return;
   }
-  toast('🤔 '+(reply||'Buyruq tushunilmadi'));
-}
-
-function findVoiceTarget(cmd){
-  if(cmd.targetId!=null){
-    const t=(S.tasks||[]).find(x=>String(x.id)===String(cmd.targetId));
-    if(t) return t;
-  }
-  const q=(cmd.task&&cmd.task.name?cmd.task.name:'').toLowerCase().trim();
-  if(!q) return null;
-  return (S.tasks||[]).find(x=>String(x.name||'').toLowerCase().includes(q));
+  toast(`🎤 "${cmd}" — buyruq topilmadi`);
 }
 
 // ══════════════════════════════════════
@@ -2257,7 +2301,7 @@ function updateClock(){
   }catch(e){}
 }
 function toggleTask(id){
-  const t=S.tasks.find(x=>String(x.id)===String(id)); if(!t) return;
+  const t=taskById(id); if(!t) return;
   t.done=!t.done;
   if(!S.activityLog) S.activityLog=[];
   S.activityLog.unshift({t:Date.now(),msg:(t.done?'✅ ':'↩️ ')+t.name});
@@ -2287,7 +2331,7 @@ async function fetchPrayers(force){
   }catch(e){}
 }
 function openFocusMode(id){
-  const t = id ? S.tasks.find(x=>String(x.id)===String(id)) : S.tasks.find(x=>!x.done);
+  const t = id ? taskById(id) : S.tasks.find(x=>!x.done);
   if(!t){ toast('Bajarilmagan vazifa yo\u2019q'); return; }
   const ov=document.getElementById('focusOv');
   document.getElementById('focusName').textContent=t.name;
@@ -2298,7 +2342,7 @@ function openFocusMode(id){
   ov.classList.add('open');
 }
 function closeFocusMode(){ document.getElementById('focusOv').classList.remove('open'); stopFocusTimer(); focusTaskId=null; }
-function focusDone(){ if(focusTaskId){ const t=S.tasks.find(x=>String(x.id)===String(focusTaskId)); if(t&&!t.done) toggleTask(focusTaskId); } closeFocusMode(); }
+function focusDone(){ if(focusTaskId){ const t=taskById(focusTaskId); if(t&&!t.done) toggleTask(focusTaskId); } closeFocusMode(); }
 let focusTaskId=null, focusStart=0, focusTimer=null, pomoMode='work', pomoLeft=25*60;
 function startFocusTimer(){
   stopFocusTimer();
@@ -2544,7 +2588,15 @@ function renderSettings(){
         Versiya: 2.0
       </div>
     </div>
+    ${window.KTExtras && window.KTExtras.settingsSection ? window.KTExtras.settingsSection(S) : ''}
+    ${S.isAdmin ? `
+    <div class="st-sec"><h4>🛠️ Admin</h4>
+      <div class="st-row"><span>Vazifalarni ommaviy tahrirlash</span>
+        <button onclick="openAdminPanel()" style="background:var(--accent);color:#000;font-weight:700">⚙️ Admin panel</button>
+      </div>
+    </div>` : ''}
   `;
+  try{ window.KTExtras && window.KTExtras.afterRenderSettings && window.KTExtras.afterRenderSettings(); }catch(e){}
 }
 function render7DayHist(){
   const days=[]; const now=new Date();
@@ -2632,7 +2684,7 @@ async function aiReplan(){
   try{
     const res=await fetch('/api/ai-plan',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-device-token':(localStorage.getItem('bh_device_token')||'')},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         mode:'replan',
         tasks:S.tasks,
@@ -2649,7 +2701,7 @@ async function aiReplan(){
     if(!updates.length) throw new Error('Bo\'sh javob');
     // Preview
     const preview=updates.slice(0,5).map(u=>{
-      const t=S.tasks.find(x=>String(x.id)===String(u.id));
+      const t=taskById(u.id);
       return t?('• '+t.name+': '+t.start+'→'+u.start):'';
     }).filter(Boolean).join('\n');
     showConfirm(
@@ -2658,7 +2710,7 @@ async function aiReplan(){
       ()=>{
         let n=0;
         updates.forEach(u=>{
-          const t=S.tasks.find(x=>String(x.id)===String(u.id));
+          const t=taskById(u.id);
           if(!t||t.cat==='prayer') return;
           if(u.start) t.start=u.start;
           if(u.end) t.end=u.end;
@@ -2752,6 +2804,10 @@ function applyVisibility(){
   });
   const lb=document.getElementById('lockBtn'); if(lb) lb.style.display = S.lockDisabled?'none':'';
   const smart=document.querySelector('.smart-add'); if(smart) smart.style.display = (S.showSmartAdd===false?'none':'');
+  const panel=document.getElementById('smartToolsPanel'); if(panel) panel.style.display=(S.showQibla===false&&S.showBreath===false&&S.showMotionDetect===false)?'none':'';
+  const qb=document.getElementById('qiblaBtn'); if(qb) qb.style.display=S.showQibla===false?'none':'';
+  const br=document.getElementById('breathBtn'); if(br) br.style.display=S.showBreath===false?'none':'';
+  const mt=document.getElementById('motionBtn'); if(mt) mt.style.display=S.showMotionDetect===false?'none':'';
 }
 function applyRadius(){
   const s=Number(S.radiusScale||1);
@@ -2834,6 +2890,51 @@ function smartAddTask(){
   persist(); renderSchedule();
   toast('✨ '+name.trim()+' → '+m2t(slot)+'–'+m2t(slot+dur)+(log.length?' • '+log.length+' vazifa qisqardi':''));
 }
+
+function splitConflictsForImportant(nt,conflicts){
+  const ns=t2m(nt.start), ne=t2m(nt.end||nt.start);
+  conflicts.forEach(t=>{
+    if(t.cat==='prayer'||!t.start||!t.end) return;
+    const ts=t2m(t.start), te=t2m(t.end);
+    if(ns<=ts||ne>=te||ne-ns<5) return;
+    const oldEnd=t.end;
+    t.name=t.name+' — 1-qism'; t.end=m2t(ns); t.splitParentId=t.splitParentId||t.cloudId||t.id;
+    S.tasks.push({...t,id:Date.now()+Math.floor(Math.random()*9999),cloudId:undefined,name:t.name.replace('1-qism','2-qism'),start:m2t(ne),end:oldEnd,done:false,autoChecked:false,deferred:false,splitParentId:t.splitParentId});
+  });
+}
+
+let qiblaStream=null,qiblaHeading=0,qiblaBearing=0,qiblaAnim=null;
+function openQibla(){ if(S.showQibla===false){toast('Qibla sozlamada o‘chiq');return;} openOv('qiblaOv'); drawQibla(); }
+function closeQibla(){ stopQibla(); closeOv('qiblaOv'); }
+async function startQibla(){
+  try{
+    qiblaStream=await navigator.mediaDevices?.getUserMedia({video:{facingMode:'environment'}}).catch(()=>null);
+    const v=document.getElementById('qiblaVideo'); if(qiblaStream&&v){v.srcObject=qiblaStream; await v.play();}
+    navigator.geolocation.getCurrentPosition(pos=>{qiblaBearing=calcQibla(pos.coords.latitude,pos.coords.longitude); document.getElementById('qiblaDeg').textContent=Math.round(qiblaBearing)+'°'; drawQibla();},()=>toast('GPS ruxsat kerak'));
+    window.addEventListener('deviceorientationabsolute',onQiblaOrient,true); window.addEventListener('deviceorientation',onQiblaOrient,true);
+    drawQibla();
+  }catch(e){toast('Qibla ochilmadi');}
+}
+function stopQibla(){ if(qiblaStream){qiblaStream.getTracks().forEach(t=>t.stop()); qiblaStream=null;} cancelAnimationFrame(qiblaAnim); }
+function onQiblaOrient(e){ qiblaHeading=typeof e.webkitCompassHeading==='number'?e.webkitCompassHeading:(360-(e.alpha||0)); }
+function calcQibla(lat,lon){ const toRad=x=>x*Math.PI/180,toDeg=x=>x*180/Math.PI,kaLat=toRad(21.4225),kaLon=toRad(39.8262),p=toRad(lat),l=toRad(lon); const y=Math.sin(kaLon-l),x=Math.cos(p)*Math.tan(kaLat)-Math.sin(p)*Math.cos(kaLon-l); return (toDeg(Math.atan2(y,x))+360)%360; }
+function drawQibla(){ const c=document.getElementById('qiblaCanvas'); if(!c)return; const r=c.getBoundingClientRect(); c.width=r.width*devicePixelRatio; c.height=r.height*devicePixelRatio; const ctx=c.getContext('2d'); ctx.scale(devicePixelRatio,devicePixelRatio); ctx.clearRect(0,0,r.width,r.height); const ang=((qiblaBearing-qiblaHeading)*Math.PI/180); ctx.save(); ctx.translate(r.width/2,r.height/2); ctx.rotate(ang); ctx.strokeStyle='rgba(34,197,94,.95)'; ctx.fillStyle='rgba(34,197,94,.95)'; ctx.lineWidth=8; ctx.beginPath(); ctx.moveTo(0,95); ctx.lineTo(0,-95); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,-125); ctx.lineTo(-30,-75); ctx.lineTo(30,-75); ctx.closePath(); ctx.fill(); ctx.restore(); const diff=Math.abs(((qiblaBearing-qiblaHeading+540)%360)-180); const st=document.getElementById('qiblaStatus'); if(st)st.textContent=diff<5?'Qibla topildi ✅':'Telefonni strelka tomonga buring'; qiblaAnim=requestAnimationFrame(drawQibla); }
+
+let breathTimer=null,breathMode='478',breathStop=false;
+function openBreath(){ if(S.showBreath===false){toast('Nafas mashqi sozlamada o‘chiq');return;} openOv('breathOv'); }
+function closeBreath(){ breathStop=true; clearTimeout(breathTimer); closeOv('breathOv'); }
+function setBreathMode(m){ breathMode=m; toast(m==='478'?'4-7-8':m==='box'?'Box breathing':'Deep'); }
+function startBreath(){ breathStop=false; const seq=breathMode==='box'?[['in','Nafas oling',4],['hold','Ushlab turing',4],['out','Nafas chiqaring',4],['hold','Kutib turing',4]]:breathMode==='deep'?[['in','Nafas oling',5],['out','Nafas chiqaring',5]]:[['in','Nafas oling',4],['hold','Ushlab turing',7],['out','Nafas chiqaring',8]]; let cycle=0,step=0; const run=()=>{ if(breathStop)return; const [cls,txt,sec]=seq[step]; const c=document.getElementById('breathCircle'),t=document.getElementById('breathText'),cy=document.getElementById('breathCycle'); c.className='breath-circle '+cls; t.textContent=txt+'... '+sec; cy.textContent=(cycle+1)+'/3 sikl'; breathTimer=setTimeout(()=>{ step++; if(step>=seq.length){step=0;cycle++;} if(cycle>=3){t.textContent='Yaxshi ish!';return;} run(); },sec*1000); }; run(); }
+
+let motionWatch=null,motionSteps=0,motionLastPeak=0,motionLastPos=null,motionDistance=0,motionSpeed=0;
+function openMotionTracker(){ if(S.showMotionDetect===false){toast('Avto-aniqlash sozlamada o‘chiq');return;} openOv('motionOv'); }
+function startMotionTracker(){ motionSteps=0; motionDistance=0; motionLastPos=null; window.addEventListener('devicemotion',onDeviceMotion); if(navigator.geolocation) motionWatch=navigator.geolocation.watchPosition(onMotionPos,()=>toast('GPS ruxsat kerak'),{enableHighAccuracy:true}); toast('🏃 Kuzatish boshlandi'); }
+function stopMotionTracker(){ window.removeEventListener('devicemotion',onDeviceMotion); if(motionWatch) navigator.geolocation.clearWatch(motionWatch); motionWatch=null; }
+function onDeviceMotion(e){ const a=e.accelerationIncludingGravity||{}; const mag=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2); if(mag>13&&Date.now()-motionLastPeak>350){motionSteps++; motionLastPeak=Date.now(); updateMotionUi(); maybeAutoCompleteMotion();} }
+function onMotionPos(pos){ if(motionLastPos){ const d=haversine(motionLastPos.coords.latitude,motionLastPos.coords.longitude,pos.coords.latitude,pos.coords.longitude); motionDistance+=d; const dt=(pos.timestamp-motionLastPos.timestamp)/3600000; motionSpeed=dt>0?d/dt:0; } motionLastPos=pos; updateMotionUi(); maybeAutoCompleteMotion(); }
+function haversine(a,b,c,d){ const R=6371,to=x=>x*Math.PI/180,dp=to(c-a),dl=to(d-b); const x=Math.sin(dp/2)**2+Math.cos(to(a))*Math.cos(to(c))*Math.sin(dl/2)**2; return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); }
+function updateMotionUi(){ const s=document.getElementById('stepCount'),d=document.getElementById('distanceKm'),v=document.getElementById('speedKmh'); if(s)s.textContent=motionSteps; if(d)d.textContent=motionDistance.toFixed(2); if(v)v.textContent=motionSpeed.toFixed(1); }
+function maybeAutoCompleteMotion(){ const t=S.tasks.find(x=>!x.done&&x.autoDetectType&&x.autoDetectType!=='none'); if(!t)return; if((t.autoDetectType==='walk'&&motionSteps>=500)||(t.autoDetectType==='run'&&motionDistance>=1&&motionSpeed>6)||(t.autoDetectType==='bike'&&motionSpeed>=12&&motionSpeed<=35)){ toggleTask(t.id); toast('✅ Harakat orqali belgilandi: '+t.name); } }
 </script>
 
 <!-- ═══ SETTINGS OVERLAY ═══ -->
@@ -2879,5 +2980,7 @@ body.no-anim *,body.no-anim *::before,body.no-anim *::after{animation-duration:0
 .ib.smart-add::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.4),transparent 60%);pointer-events:none}
 </style>
 
+<canvas id="ktConfetti" style="position:fixed;inset:0;pointer-events:none;z-index:9998;display:none"></canvas>
+<div id="ktExtrasRoot"></div>
 </body>
 </html>
