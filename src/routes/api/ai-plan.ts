@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { extractToken, findDeviceByToken } from "@/lib/gate.server";
+
 
 // Lovable AI Gateway proxy for the Kun Tartibim static app.
 // Supports two modes:
@@ -37,6 +39,16 @@ export const Route = createFileRoute("/api/ai-plan")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        // Require a valid device token — this endpoint proxies a paid AI key.
+        const token = extractToken(request);
+        const device = await findDeviceByToken(token).catch(() => null);
+        if (!device) {
+          return new Response(
+            JSON.stringify({ error: "unauthorized" }),
+            { status: 401, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey) {
           return new Response(
@@ -44,6 +56,7 @@ export const Route = createFileRoute("/api/ai-plan")({
             { status: 500, headers: { "Content-Type": "application/json" } },
           );
         }
+
 
         let payload: any = {};
         try { payload = await request.json(); } catch { /* empty */ }

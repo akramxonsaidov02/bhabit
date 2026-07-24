@@ -1445,7 +1445,7 @@ async function runAiSuggest(name){
   try{
     const res=await fetch('/api/ai-plan',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-device-token':(localStorage.getItem('bh_device_token')||'')},
       body:JSON.stringify({
         mode:'suggest',
         name,
@@ -2093,7 +2093,7 @@ async function sendVoiceBlob(blob){
 async function runVoiceCommand(text){
   const res=await fetch('/api/ai-plan',{
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{'Content-Type':'application/json','x-device-token':(localStorage.getItem('bh_device_token')||'')},
     body:JSON.stringify({
       mode:'voice',
       text,
@@ -2632,7 +2632,7 @@ async function aiReplan(){
   try{
     const res=await fetch('/api/ai-plan',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-device-token':(localStorage.getItem('bh_device_token')||'')},
       body:JSON.stringify({
         mode:'replan',
         tasks:S.tasks,
