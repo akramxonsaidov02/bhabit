@@ -172,54 +172,88 @@
     fab.onclick = startVoice;
     document.body.appendChild(fab);
   }
-  function startVoice(){
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if(!SR){ window.toast && window.toast('❌ Brauzer ovozni qo\'llab-quvvatlamaydi'); return; }
-    const r = new SR();
-    r.lang = 'uz-UZ';
-    r.interimResults = false;
-    r.maxAlternatives = 1;
+  let rec=null, chunks=[], stream=null;
+  async function startVoice(){
     const fab = document.getElementById('ktMicFab');
-    if(fab){ fab.style.background='#ef4444'; fab.innerHTML='🔴'; }
-    window.toast && window.toast('🎤 Gapiring…');
-    r.onresult = async (ev)=>{
-      const text = ev.results[0][0].transcript;
-      window.toast && window.toast('💭 "'+text+'"');
-      await processVoice(text);
-    };
-    r.onerror = ()=>{ window.toast && window.toast('❌ Ovozni tushunmadim'); };
-    r.onend = ()=>{ if(fab){ fab.style.background='linear-gradient(135deg,#a78bfa,#22c55e)'; fab.innerHTML='🎤'; } };
-    try{ r.start(); }catch(e){ window.toast && window.toast('❌ Xato'); }
+    if(rec && rec.state==='recording'){
+      rec.stop();
+      return;
+    }
+    try{
+      if(!navigator.mediaDevices || !window.MediaRecorder){ window.toast && window.toast('❌ Mikrofon qo\'llanmaydi'); return; }
+      stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      chunks=[];
+      rec = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : undefined });
+      rec.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+      rec.onstop = async ()=>{
+        if(fab){ fab.style.background='linear-gradient(135deg,#a78bfa,#22c55e)'; fab.innerHTML='🎤'; }
+        try{ stream && stream.getTracks().forEach(t=>t.stop()); }catch(e){}
+        const blob = new Blob(chunks, { type:'audio/webm' });
+        await transcribeAndProcess(blob);
+      };
+      rec.start();
+      if(fab){ fab.style.background='#ef4444'; fab.innerHTML='■'; }
+      window.toast && window.toast('🎤 Gapiring, tugatish uchun yana bosing');
+      setTimeout(()=>{ try{ if(rec && rec.state==='recording') rec.stop(); }catch(e){} }, 30000);
+    }catch(e){
+      if(fab){ fab.style.background='linear-gradient(135deg,#a78bfa,#22c55e)'; fab.innerHTML='🎤'; }
+      window.toast && window.toast('❌ Mikrofon ruxsati kerak');
+    }
+  }
+  async function transcribeAndProcess(blob){
+    try{
+      window.toast && window.toast('🧠 Ovoz tahlil qilinmoqda…');
+      const fd = new FormData();
+      fd.append('file', blob, 'voice.webm');
+      const tr = await fetch('/api/voice-transcribe', { method:'POST', headers:{'x-device-token':localStorage.getItem('bh_device_token')||''}, body:fd });
+      const tj = await tr.json();
+      if(!tr.ok || !tj.ok || !tj.text) throw new Error(tj.error||'Transkripsiya xatosi');
+      window.toast && window.toast('💭 '+tj.text);
+      await processVoice(tj.text);
+    }catch(e){ window.toast && window.toast('❌ '+(e.message||'Ovoz ishlamadi')); }
   }
   async function processVoice(transcript){
     try{
       const S = window.S;
       const r = await fetch('/api/ai-plan', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ mode:'voice', transcript, dayStart:S.dayStart, sleep:S.sleepTime })
+        method:'POST', headers:{'Content-Type':'application/json','x-device-token':localStorage.getItem('bh_device_token')||''},
+        body: JSON.stringify({ mode:'voice', transcript, dayStart:S.dayStart, sleep:S.sleepTime, prayers:S.prayers, tasks:S.tasks, now:new Date().toISOString() })
       });
       const j = await r.json();
       if(!j.ok){ window.toast && window.toast('❌ AI xatoligi'); return; }
       let data; try{ data = JSON.parse(j.content); }catch(e){
         const m = j.content.match(/\{[\s\S]*\}/); if(m) data = JSON.parse(m[0]);
       }
-      if(!data || !data.name){ window.toast && window.toast('❌ Vazifa yasab bo\'lmadi'); return; }
-      const task = {
-        id: Date.now(),
-        name: data.name,
-        start: data.start || '09:00',
-        end: data.end || '10:00',
-        cat: data.category || 'other',
-        priority: data.priority || 'o\'rta',
-        done: false
-      };
-      S.tasks = S.tasks || [];
-      S.tasks.push(task);
+      if(!data || !data.action){ window.toast && window.toast('❌ Buyruq tushunilmadi'); return; }
+      executeVoiceAction(data);
+    }catch(e){ window.toast && window.toast('❌ '+e.message); }
+  }
+  function findTask(id){
+    const S=window.S; if(!S||!S.tasks) return null;
+    return S.tasks.find(t=>String(t.id)===String(id)||String(t.cloudId)===String(id));
+  }
+  function executeVoiceAction(data){
+    const S = window.S; if(!S) return;
+    if(data.action==='add' && data.task){
+      const task = { id:Date.now(), name:data.task.name||'Yangi vazifa', start:data.task.start||'09:00', end:data.task.end||'10:00', cat:data.task.category||'other', priority:data.task.priority||'o\'rta', note:data.task.note||'', done:false, autoChecked:false, deferred:false };
+      S.tasks = S.tasks || []; S.tasks.push(task);
       window.persist && window.persist();
       window.KTCloud && window.KTCloud.pushTaskChange && window.KTCloud.pushTaskChange(task);
-      try{ window.renderSchedule && window.renderSchedule(); }catch(e){}
-      window.toast && window.toast('✅ "'+task.name+'" qo\'shildi');
-    }catch(e){ window.toast && window.toast('❌ '+e.message); }
+      window.renderSchedule && window.renderSchedule();
+      window.toast && window.toast('✅ '+(data.reply||('"'+task.name+'" qo\'shildi')));
+      return;
+    }
+    const t = findTask(data.targetId);
+    if(!t){ window.toast && window.toast(data.reply||'Mos vazifa topilmadi'); return; }
+    if(data.action==='complete') t.done=true;
+    else if(data.action==='uncomplete') t.done=false;
+    else if(data.action==='delete') S.tasks=S.tasks.filter(x=>String(x.id)!==String(t.id)&&String(x.cloudId)!==String(t.cloudId));
+    else { window.toast && window.toast(data.reply||'Buyruq tushunilmadi'); return; }
+    window.persist && window.persist();
+    if(data.action==='delete') window.KTCloud && window.KTCloud.deleteTaskCloud && window.KTCloud.deleteTaskCloud(t);
+    else window.KTCloud && window.KTCloud.saveTaskCompletion && window.KTCloud.saveTaskCompletion(t,t.done);
+    window.renderSchedule && window.renderSchedule();
+    window.toast && window.toast('✅ '+(data.reply||'Bajarildi'));
   }
 
   // ---------- CONFETTI "BUGUNGI G'ALABA" ----------
@@ -418,7 +452,7 @@
 
     try{
       const r = await fetch('/api/ai-plan', {
-        method:'POST', headers:{'Content-Type':'application/json'},
+        method:'POST', headers:{'Content-Type':'application/json','x-device-token':localStorage.getItem('bh_device_token')||''},
         body: JSON.stringify({ mode:'report', days, history: summary })
       });
       const j = await r.json();
@@ -467,7 +501,7 @@
     ['weather','briefing','confetti','streakAnim','streakFreeze','badges','hotkeys','templates'].forEach(k=>{
       if(window.S.extras[k]===undefined) window.S.extras[k]=true;
     });
-    if(window.S.extras.voiceAdd===undefined) window.S.extras.voiceAdd=false;
+    if(window.S.extras.voiceAdd===undefined) window.S.extras.voiceAdd=true;
     try{ window.persist && window.persist(); }catch(e){}
     injectHomeBits();
     initHotkeys();
@@ -486,7 +520,7 @@
   // ---------- EXPORT ----------
   window.KTExtras = {
     settingsSection, afterRenderSettings, toggle,
-    showReport, applyTemplate, sendBriefingNow,
+    showReport, applyTemplate, sendBriefingNow, startVoice,
     fireConfetti, calcStreak
   };
 })();

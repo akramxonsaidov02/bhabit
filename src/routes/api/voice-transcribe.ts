@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { extractToken, findDeviceByToken } from "@/lib/gate.server";
 
 // Lovable AI STT proxy — o'zbek tilida ovozni matnga aylantirish.
 // Client MediaRecorder blob yuboradi (webm/mp4/wav), biz uni gateway'ga uzatamiz.
@@ -14,6 +15,10 @@ export const Route = createFileRoute("/api/voice-transcribe")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const token = extractToken(request);
+        const device = await findDeviceByToken(token).catch(() => null);
+        if (!device) return json({ error: "unauthorized" }, 401);
+
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey) return json({ error: "AI xizmati sozlanmagan" }, 500);
 

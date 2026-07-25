@@ -784,11 +784,14 @@ body::before {
       <button onclick="openCoach()" class="ripple-host" style="flex:1;padding:10px;border-radius:var(--r);border:1px solid rgba(var(--Ar),.25);background:rgba(var(--Ar),.1);color:var(--A);font-size:12px;font-weight:600;font-family:inherit;cursor:pointer">🤖 Murabbiy</button>
     </div>
     <div id="statsContent"></div>
+  </div>
   <button class="fab" onclick="openAdd()">＋</button>
 
   <div class="bnav">
     <button class="nb on" id="nb0" onclick="goPage('home')"><span class="nb-i">⊞</span>Asosiy</button>
     <button class="nb" id="nb1" onclick="goPage('stats')"><span class="nb-i">◎</span>Statistika</button>
+    <button class="nb" id="nb2" onclick="window.KTExtras&&window.KTExtras.startVoice&&window.KTExtras.startVoice()"><span class="nb-i">🎤</span>Ovoz</button>
+    <button class="nb" id="nb3" onclick="openSettings()"><span class="nb-i">⚙️</span>Sozlama</button>
     <button class="nb" onclick="confirmLogout()"><span class="nb-i">⎋</span>Chiqish</button>
   </div>
 </div>
@@ -1038,6 +1041,7 @@ const DEFP = {fajr:"04:33",dhuhr:"13:07",asr:"17:23",maghrib:"20:21",isha:"21:38
 //  STATE
 // ═══════════════════════════════════════
 let S = { tasks:[], prayers:{...DEFP}, theme:'dark', appName:'Kun Tartibim', accent:'#22c55e', pinCode:'0000', pinSetupDone:false };
+window.S = S;
 let editId = null, curFilter = 'all', editMode = false;
 let pinSetupInput = '', pinLockInput = '', pinSetupStep = 1, pinSetupFirst = '';
 let aiTimer = null;
@@ -1055,7 +1059,7 @@ function persist(){
   }
 }
 function hydrate(){
-  try{ const r=localStorage.getItem('kt5'); if(r){const p=JSON.parse(r);S=Object.assign({},S,p);} }catch(e){}
+  try{ const r=localStorage.getItem('kt5'); if(r){const p=JSON.parse(r);S=Object.assign({},S,p); window.S=S;} }catch(e){}
   if(!S.tasks||!S.tasks.length) S.tasks=DEFTASKS.map(t=>({...t,done:false,autoChecked:false,deferred:false}));
   S.tasks=S.tasks.map((t,i)=>({...t,order:t.order??i,autoDetectType:t.autoDetectType||'none'}));
   if(!S.activityLog) S.activityLog=[];
@@ -1227,11 +1231,11 @@ function doLogin(){
 }
 // Sozlamalardan chaqiriladi: admin panelni ochish
 function openAdminPanel(){
-  if(!S.isAdmin){ toast('❌ Faqat admin uchun'); return; }
+  const d=window.__BH_DEVICE__||{};
+  const canAdmin=S.isAdmin||d.role==='admin'||d.role==='sub_admin'||!!(d.permissions&&d.permissions.manage_devices);
+  if(!canAdmin){ toast('❌ Faqat admin uchun'); return; }
   try{ closeSettings(); }catch(e){}
-  document.getElementById('adminPanel').style.display='block';
-  renderAdmTasks();
-  const n=document.getElementById('admName'); if(n) n.value=S.appName||'Kun Tartibim';
+  window.location.href='/admin';
 }
 
 function enterApp(){
@@ -1583,7 +1587,7 @@ async function runAiSuggest(name){
   try{
     const res=await fetch('/api/ai-plan',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-device-token':localStorage.getItem('bh_device_token')||''},
       body:JSON.stringify({
         mode:'suggest',
         name,
@@ -2310,6 +2314,37 @@ function toggleTask(id){
   if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.saveTaskCompletion(t,t.done);
   if(typeof haptic==='function') haptic('light');
 }
+document.addEventListener('click',function(e){
+  const check=e.target.closest&&e.target.closest('.tc-check');
+  if(!check) return;
+  const card=check.closest('.tc'); if(!card||!card.id) return;
+  const id=card.id.replace(/^tc-/,'');
+  if(!id) return;
+  e.preventDefault(); e.stopPropagation();
+  toggleTask(id);
+},true);
+function goPage(page){
+  const home=document.getElementById('pgHome'), stats=document.getElementById('pgStats');
+  if(home) home.style.display=page==='home'?'block':'none';
+  if(stats) stats.style.display=page==='stats'?'block':'none';
+  document.querySelectorAll('.bnav .nb').forEach(b=>b.classList.remove('on'));
+  const active=document.getElementById(page==='stats'?'nb1':'nb0'); if(active) active.classList.add('on');
+  if(page==='stats') renderStats();
+}
+function renderStats(){
+  const el=document.getElementById('statsContent'); if(!el) return;
+  const tot=S.tasks.length, don=S.tasks.filter(t=>t.done).length, pct=tot?Math.round(don/tot*100):0;
+  const streak=(window.KTExtras&&window.KTExtras.calcStreak?window.KTExtras.calcStreak():(S.streak||0));
+  el.innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card gl"><b>${pct}%</b><span>Bugungi natija</span></div>
+      <div class="stat-card gl"><b>${don}/${tot}</b><span>Bajarildi</span></div>
+    </div>
+    <div class="streak-card gl"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b>🔥 Streak</b><span><b id="streakNum">${streak}</b> kun</span></div><div class="streak-row" id="streakRow"></div><div style="font-size:12px;color:var(--tx2);margin-top:10px">❄️ Streak Freeze: ${Number(S.streakFreezeLeft??2)} ta qoldi</div></div>
+    <div class="cat-progress-card gl"><b>📈 Oxirgi 7 kun</b><div id="dayHistoryList" style="margin-top:10px"></div></div>
+    <div class="cat-progress-card gl" id="weatherCard" style="display:none"></div>`;
+  renderStreak(); renderDayHistory(); renderWeatherCard&&renderWeatherCard();
+}
 async function fetchPrayers(force){
   // Foydalanuvchi qoʻlda tahrirlagan boʻlsa — hech qachon ustidan yozmaymiz
   if(!force && S.prayersManual) return;
@@ -2465,9 +2500,11 @@ function renderSettings(){
   const accents=['#22c55e','#3b82f6','#a78bfa','#f59e0b','#ef4444','#f97316','#ec4899','#14b8a6'];
   const fonts=[{n:'Inter (asosiy)',v:''},{n:'System',v:'system-ui,-apple-system,sans-serif'},{n:'Serif',v:'Georgia,serif'},{n:'Mono',v:'ui-monospace,monospace'}];
   const langs=[['uz','O\u2019zbek'],['ru','Русский'],['en','English']];
+  const dev=window.__BH_DEVICE__||{};
+  const canOpenAdmin=S.isAdmin||dev.role==='admin'||dev.role==='sub_admin'||!!(dev.permissions&&dev.permissions.manage_devices);
   const notifTasks = (S.tasks||[]).map(t=>{
     const on = !S.notifOff || !S.notifOff[t.id];
-    return `<label class="st-row"><span>${esc(t.name)}</span><input type="checkbox" ${on?'checked':''} onchange="toggleTaskNotif(${t.id},this.checked)"></label>`;
+    return `<label class="st-row"><span>${esc(t.name)}</span><input type="checkbox" ${on?'checked':''} onchange="toggleTaskNotif(${taskIdArg(t.id)},this.checked)"></label>`;
   }).join('');
   c.innerHTML = `
     <div class="st-sec"><h4>\ud83c\udfa8 Rang va tema</h4>
@@ -2589,10 +2626,10 @@ function renderSettings(){
       </div>
     </div>
     ${window.KTExtras && window.KTExtras.settingsSection ? window.KTExtras.settingsSection(S) : ''}
-    ${S.isAdmin ? `
+    ${canOpenAdmin ? `
     <div class="st-sec"><h4>🛠️ Admin</h4>
-      <div class="st-row"><span>Vazifalarni ommaviy tahrirlash</span>
-        <button onclick="openAdminPanel()" style="background:var(--accent);color:#000;font-weight:700">⚙️ Admin panel</button>
+      <div class="st-row"><span>Qurilmalar va QR ruxsatlarni boshqarish</span>
+        <button onclick="openAdminPanel()" style="background:var(--accent);color:#000;font-weight:700">⚙️ Admin panelga o'tish</button>
       </div>
     </div>` : ''}
   `;
@@ -2684,7 +2721,7 @@ async function aiReplan(){
   try{
     const res=await fetch('/api/ai-plan',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:{'Content-Type':'application/json','x-device-token':localStorage.getItem('bh_device_token')||''},
       body:JSON.stringify({
         mode:'replan',
         tasks:S.tasks,
@@ -2737,7 +2774,7 @@ function exportData(){
 function importData(ev){
   const f=ev.target.files[0]; if(!f) return;
   const r=new FileReader();
-  r.onload=e=>{ try{ const d=JSON.parse(e.target.result); if(!d.tasks) throw new Error(); S=Object.assign({},S,d); persist(); toast('\u2705 Import qilindi'); location.reload(); }catch{ toast('\u274c Noto\u2019g\u2019ri fayl'); } };
+  r.onload=e=>{ try{ const d=JSON.parse(e.target.result); if(!d.tasks) throw new Error(); S=Object.assign({},S,d); window.S=S; persist(); toast('\u2705 Import qilindi'); location.reload(); }catch{ toast('\u274c Noto\u2019g\u2019ri fayl'); } };
   r.readAsText(f);
 }
 function changePinFlow(){
