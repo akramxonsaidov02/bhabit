@@ -2491,9 +2491,11 @@ function renderSettings(){
   const accents=['#22c55e','#3b82f6','#a78bfa','#f59e0b','#ef4444','#f97316','#ec4899','#14b8a6'];
   const fonts=[{n:'Inter (asosiy)',v:''},{n:'System',v:'system-ui,-apple-system,sans-serif'},{n:'Serif',v:'Georgia,serif'},{n:'Mono',v:'ui-monospace,monospace'}];
   const langs=[['uz','O\u2019zbek'],['ru','Русский'],['en','English']];
+  const dev=window.__BH_DEVICE__||{};
+  const canOpenAdmin=S.isAdmin||dev.role==='admin'||dev.role==='sub_admin'||!!(dev.permissions&&dev.permissions.manage_devices);
   const notifTasks = (S.tasks||[]).map(t=>{
     const on = !S.notifOff || !S.notifOff[t.id];
-    return `<label class="st-row"><span>${esc(t.name)}</span><input type="checkbox" ${on?'checked':''} onchange="toggleTaskNotif(${t.id},this.checked)"></label>`;
+    return `<label class="st-row"><span>${esc(t.name)}</span><input type="checkbox" ${on?'checked':''} onchange="toggleTaskNotif(${taskIdArg(t.id)},this.checked)"></label>`;
   }).join('');
   c.innerHTML = `
     <div class="st-sec"><h4>\ud83c\udfa8 Rang va tema</h4>
@@ -2615,10 +2617,10 @@ function renderSettings(){
       </div>
     </div>
     ${window.KTExtras && window.KTExtras.settingsSection ? window.KTExtras.settingsSection(S) : ''}
-    ${S.isAdmin ? `
+    ${canOpenAdmin ? `
     <div class="st-sec"><h4>🛠️ Admin</h4>
-      <div class="st-row"><span>Vazifalarni ommaviy tahrirlash</span>
-        <button onclick="openAdminPanel()" style="background:var(--accent);color:#000;font-weight:700">⚙️ Admin panel</button>
+      <div class="st-row"><span>Qurilmalar va QR ruxsatlarni boshqarish</span>
+        <button onclick="openAdminPanel()" style="background:var(--accent);color:#000;font-weight:700">⚙️ Admin panelga o'tish</button>
       </div>
     </div>` : ''}
   `;
