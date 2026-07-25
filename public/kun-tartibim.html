@@ -2314,6 +2314,15 @@ function toggleTask(id){
   if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.saveTaskCompletion(t,t.done);
   if(typeof haptic==='function') haptic('light');
 }
+document.addEventListener('click',function(e){
+  const check=e.target.closest&&e.target.closest('.tc-check');
+  if(!check) return;
+  const card=check.closest('.tc'); if(!card||!card.id) return;
+  const id=card.id.replace(/^tc-/,'');
+  if(!id) return;
+  e.preventDefault(); e.stopPropagation();
+  toggleTask(id);
+},true);
 function goPage(page){
   const home=document.getElementById('pgHome'), stats=document.getElementById('pgStats');
   if(home) home.style.display=page==='home'?'block':'none';
