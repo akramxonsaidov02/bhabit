@@ -1398,11 +1398,49 @@ function renderWeekStrip(){
     return `<button class="week-day ${k===selected?'on':''}" ${future?'disabled':''} onclick="selectDay('${k}')"><span>${name}</span><strong>${d.getDate()}</strong></button>`;
   }).join('');
 }
-function selectDay(k){
+// Kalendardan kun tanlash: shu kunning belgilashlari asosiy ro'yxatda chiqadi
+async function selectDay(k){
   if(k>todayKey()){ toast('Kelasi kunlar hali yopiq'); return; }
-  S.selectedDate=k; persist(); renderWeekStrip();
-  showDayDetail(k);
+  S.selectedDate=k;
+  window.__KT_ACTIVE_DATE__=k;
+  applyDayView();
+  renderWeekStrip();
+  goPage('home');
+  renderSchedule();
+  renderDayBanner();
+  persist();
+  // Bulutdan shu kunning haqiqiy belgilashlarini olib kelamiz
+  try{
+    if(window.KTCloud&&window.KTCloud.isReady&&window.KTCloud.isReady()&&window.KTCloud.fetchDay){
+      const d=await window.KTCloud.fetchDay(k);
+      if(d&&Array.isArray(d.tasks)&&S.selectedDate===k){
+        const map=dayMap(k);
+        d.tasks.forEach(t=>{ const key=String(t.cloudId||t.id||''); if(!key) return; if(t.done) map[key]=true; else delete map[key]; });
+        applyDayView(); renderSchedule(); renderDayBanner(); persist();
+      }
+    }
+  }catch(e){ console.error('fetchDay',e); }
 }
+
+// "O'tgan kunni ko'rib turasiz" bandi
+function renderDayBanner(){
+  let el=document.getElementById('dayBanner');
+  const host=document.getElementById('pgHome');
+  if(!host) return;
+  if(!el){
+    el=document.createElement('div');
+    el.id='dayBanner';
+    el.style.cssText='display:none;align-items:center;gap:8px;margin-bottom:10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.10);font-size:12px;color:var(--tx)';
+    host.insertBefore(el,host.firstChild);
+  }
+  if(isToday()){ el.style.display='none'; return; }
+  const d=new Date(activeDate()+'T00:00:00');
+  const days=['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'];
+  el.style.display='flex';
+  el.innerHTML=`<span>📅 <b>${days[d.getDay()]}, ${activeDate()}</b> — o‘tgan kun ko‘rsatilmoqda. Belgilashlar shu kunga yoziladi.</span>
+    <button onclick="selectDay('${todayKey()}')" style="margin-left:auto;padding:6px 10px;border-radius:8px;border:1px solid var(--bdr2);background:var(--glass-bg2);color:var(--tx);font-weight:600;cursor:pointer;font-family:inherit;font-size:11px;white-space:nowrap">Bugunga</button>`;
+}
+
 
 function updateNextP(){
   const p=S.prayers;
