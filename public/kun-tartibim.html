@@ -1729,25 +1729,48 @@ function confirmDeleteTask(id){
 
 // ── PAGES ──
 
+function dayKeyOffset(n){
+  const d=new Date(); d.setDate(d.getDate()-n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function dayRowHTML(date,d){
+  const pct=d?d.pct:null;
+  const color=pct==null?'var(--tx3)':pct>=80?'var(--A)':pct>=50?'var(--amber)':'var(--red)';
+  const label=date.split('-').slice(1).join('/');
+  return `<div id="dh-${date}" onclick="showDayDetail('${date}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;margin-bottom:4px">
+      <div style="width:40px;font-size:11px;font-weight:700;color:var(--tx2);text-align:right">${label}</div>
+      <div style="flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden"><div style="height:6px;width:${pct||0}%;background:${color};border-radius:99px"></div></div>
+      <div style="width:36px;font-size:11px;font-weight:700;color:${color};text-align:right">${pct==null?'—':pct+'%'}</div>
+      <div style="font-size:10px;color:var(--tx3)">${d?d.done+'/'+d.total:''}</div>
+    </div>`;
+}
 function renderDayHistory(){
   const el=document.getElementById('dayHistoryList');
   if(!el) return;
   const history=S.dayHistory||{};
-  const keys=Object.keys(history).sort().reverse();
-  if(!keys.length){el.innerHTML='<div style="font-size:12px;color:var(--tx3);text-align:center;padding:16px">Hali arxiv yo’q — birinchi kun tugagach saqlanadi</div>';return;}
-  el.innerHTML=keys.map(date=>{
-    const d=history[date];
-    const bar=Math.round((d.pct||0)/100*80);
-    const color=d.pct>=80?'var(--A)':d.pct>=50?'var(--amber)':'var(--red)';
-    const label=date.split('-').slice(1).join('/');
-    return `<div onclick="showDayDetail('${date}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;margin-bottom:4px;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background='none'">
-      <div style="width:40px;font-size:11px;font-weight:700;color:var(--tx2);text-align:right">${label}</div>
-      <div style="flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden"><div style="height:6px;width:${d.pct}%;background:${color};border-radius:99px"></div></div>
-      <div style="width:36px;font-size:11px;font-weight:700;color:${color};text-align:right">${d.pct}%</div>
-      <div style="font-size:10px;color:var(--tx3)">${d.done}/${d.total}</div>
-    </div>`;
-  }).join('');
+  const days=[0,1,2,3,4,5,6].map(dayKeyOffset);
+  const today=todayKey();
+  const localOf=(date)=>{
+    if(date===today){
+      const tot=(S.tasks||[]).length, don=(S.tasks||[]).filter(t=>t.done).length;
+      return {pct:tot?Math.round(don/tot*100):0,done:don,total:tot};
+    }
+    return history[date]||null;
+  };
+  el.innerHTML=days.map(date=>dayRowHTML(date,localOf(date))).join('');
+  // Bulutdan haqiqiy kunlik natijalarni to‘ldirish
+  if(window.KTCloud&&window.KTCloud.isReady&&window.KTCloud.isReady()&&window.KTCloud.fetchDay){
+    days.forEach(async (date)=>{
+      try{
+        const d=await window.KTCloud.fetchDay(date);
+        if(!d||!d.total) return;
+        const row=document.getElementById('dh-'+date);
+        if(row) row.outerHTML=dayRowHTML(date,d);
+      }catch(e){}
+    });
+  }
 }
+
 
 async function showDayDetail(date){
   goPage('stats');
