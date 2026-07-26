@@ -1087,13 +1087,24 @@ function hydrate(){
   S.tasks=S.tasks.map((t,i)=>({...t,order:t.order??i,autoDetectType:t.autoDetectType||'none'}));
   if(!S.activityLog) S.activityLog=[];
   if(!S.dayHistory) S.dayHistory={};
-  if(!S.selectedDate) S.selectedDate=todayKey();
+  if(!S.completions||typeof S.completions!=='object') S.completions={};
   if(S.showQibla===undefined) S.showQibla=true;
   if(S.showBreath===undefined) S.showBreath=true;
   if(S.showMotionDetect===undefined) S.showMotionDetect=true;
   if(S.autoShiftDayStart===undefined) S.autoShiftDayStart=true;
   if(S.autoShiftPrayer===undefined) S.autoShiftPrayer=true;
+  // Migratsiya: eski versiyada belgilashlar task.done ichida edi → bugungi kunga ko'chiramiz
+  const t0=todayKey();
+  if(!S.completions[S.lastResetDate||t0]){
+    const day={};
+    (S.tasks||[]).forEach(t=>{ if(t.done) day[taskKey(t)]=true; });
+    if(Object.keys(day).length) S.completions[S.lastResetDate||t0]=day;
+  }
+  // Har doim bugundan boshlaymiz (kechagi tanlangan kun yopishib qolmasin)
+  S.selectedDate=t0;
   checkDailyReset();
+  pruneCompletions();
+  applyDayView();
 }
 
 function todayKey(){
@@ -1101,32 +1112,61 @@ function todayKey(){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
+// ── KUNLIK BELGILASHLAR (har bir kun alohida saqlanadi) ──
+function taskKey(t){ return String((t&&(t.cloudId||t.id))||''); }
+function activeDate(){ return S.selectedDate||todayKey(); }
+function isToday(){ return activeDate()===todayKey(); }
+function dayMap(date){
+  if(!S.completions) S.completions={};
+  if(!S.completions[date]) S.completions[date]={};
+  return S.completions[date];
+}
+// Tanlangan kundagi holatni ko'rinadigan `done` maydoniga ko'chiradi
+function applyDayView(){
+  const map=dayMap(activeDate());
+  (S.tasks||[]).forEach(t=>{ t.done=!!map[taskKey(t)]; });
+  window.__KT_ACTIVE_DATE__=activeDate();
+}
+function setDone(t,done){
+  const map=dayMap(activeDate());
+  const k=taskKey(t);
+  if(done) map[k]=true; else delete map[k];
+  t.done=!!done;
+}
+// 7 kundan oshgan kunlarni tozalaymiz (talab: hafta davomida saqlanadi)
+function pruneCompletions(){
+  const keep=new Set();
+  for(let i=0;i<8;i++){ const d=new Date(); d.setDate(d.getDate()-i); keep.add(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')); }
+  Object.keys(S.completions||{}).forEach(k=>{ if(!keep.has(k)) delete S.completions[k]; });
+}
+
 function checkDailyReset(){
   const today=todayKey();
   if(S.lastResetDate===today) return;
-  // Archive yesterday before reset
-  if(S.lastResetDate && S.tasks && S.tasks.length){
+  // Kechagi kunni arxivga olamiz (belgilashlar S.completions da saqlanib qoladi)
+  const prev=S.lastResetDate;
+  if(prev && S.tasks && S.tasks.length){
+    const map=(S.completions&&S.completions[prev])||{};
+    const done=(S.tasks||[]).filter(t=>map[taskKey(t)]).length;
+    const total=S.tasks.length;
     const snap={
-      date:S.lastResetDate,
-      done:S.tasks.filter(t=>t.done).length,
-      total:S.tasks.length,
-      pct:Math.round(S.tasks.filter(t=>t.done).length/S.tasks.length*100),
-      tasks:S.tasks.map(t=>({id:t.id,name:t.name,cat:t.cat,start:t.start,end:t.end,done:t.done,deferred:t.deferred}))
+      date:prev, done, total,
+      pct:total?Math.round(done/total*100):0,
+      tasks:S.tasks.map(t=>({id:t.id,cloudId:t.cloudId,name:t.name,cat:t.cat,start:t.start,end:t.end,done:!!map[taskKey(t)],deferred:false}))
     };
     if(!S.dayHistory) S.dayHistory={};
-    S.dayHistory[S.lastResetDate]=snap;
-    // Keep 30 days max
+    S.dayHistory[prev]=snap;
     const keys=Object.keys(S.dayHistory).sort().reverse();
     if(keys.length>30) keys.slice(30).forEach(k=>delete S.dayHistory[k]);
-    // Streak
-    if(snap.pct>=50) S.streak=(S.streak||0)+1;
-    else S.streak=0;
+    if(snap.pct>=50) S.streak=(S.streak||0)+1; else S.streak=0;
   }
-  // New day — reset all tasks
+  // Yangi kun — vazifalar o'zi saqlanadi, faqat kunlik holat bo'sh boshlanadi
   S.tasks=(S.tasks||[]).map(t=>({...t,done:false,autoChecked:false,deferred:false}));
   S.water=0; S.steps=0;
   S.lastResetDate=today;
+  S.selectedDate=today;
 }
+
 
 
 // ═══════════════════════════════════════
