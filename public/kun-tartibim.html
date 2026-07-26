@@ -2463,10 +2463,12 @@ function goPage(page){
   const home=document.getElementById('pgHome'), stats=document.getElementById('pgStats');
   if(home) home.style.display=page==='home'?'block':'none';
   if(stats) stats.style.display=page==='stats'?'block':'none';
+  document.body.classList.toggle('page-not-home',page!=='home');
   document.querySelectorAll('.bnav .nb').forEach(b=>b.classList.remove('on'));
   const active=document.getElementById(page==='stats'?'nb1':'nb0'); if(active) active.classList.add('on');
   if(page==='stats') renderStats();
 }
+
 function renderStats(){
   const el=document.getElementById('statsContent'); if(!el) return;
   const tot=S.tasks.length, don=S.tasks.filter(t=>t.done).length, pct=tot?Math.round(don/tot*100):0;
