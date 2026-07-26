@@ -2440,14 +2440,16 @@ function updateClock(){
 }
 function toggleTask(id){
   const t=taskById(id); if(!t) return;
-  t.done=!t.done;
+  const date=activeDate();
+  setDone(t,!t.done);
   if(!S.activityLog) S.activityLog=[];
-  S.activityLog.unshift({t:Date.now(),msg:(t.done?'✅ ':'↩️ ')+t.name});
+  S.activityLog.unshift({t:Date.now(),msg:(t.done?'✅ ':'↩️ ')+t.name+(date===todayKey()?'':' ('+date+')')});
   S.activityLog=S.activityLog.slice(0,200);
   persist(); renderSchedule(); updateProgress(); renderStreak && renderStreak();
-  if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.saveTaskCompletion(t,t.done);
+  if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.saveTaskCompletion(t,t.done,date);
   if(typeof haptic==='function') haptic('light');
 }
+
 document.addEventListener('click',function(e){
   const check=e.target.closest&&e.target.closest('.tc-check');
   if(!check) return;
