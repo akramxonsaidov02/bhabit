@@ -1749,13 +1749,39 @@ function renderDayHistory(){
   }).join('');
 }
 
-function showDayDetail(date){
-  const d=S.dayHistory?.[date];if(!d)return;
-  document.getElementById('dayDetailCard').style.display='block';
-  document.getElementById('dayDetailTitle').textContent=date+' — '+d.pct+'% bajarildi';
-  const cats=Object.keys(CATS);
+async function showDayDetail(date){
+  goPage('stats');
+  const card=document.getElementById('dayDetailCard');
+  const title=document.getElementById('dayDetailTitle');
+  const cont=document.getElementById('dayDetailContent');
+  if(!card||!title||!cont) return;
+  card.style.display='block';
+  title.textContent=date;
+  cont.innerHTML='<div style="font-size:12px;color:var(--tx3);padding:10px">Yuklanmoqda…</div>';
+  card.scrollIntoView({behavior:'smooth'});
+  let d=null;
+  // 1) Bulutdagi haqiqiy belgilashlar (o'sha kun uchun)
+  try{
+    if(window.KTCloud&&window.KTCloud.isReady&&window.KTCloud.isReady()&&window.KTCloud.fetchDay){
+      d=await window.KTCloud.fetchDay(date);
+    }
+  }catch(e){ console.error('fetchDay',e); }
+  // 2) Bugungi kun — joriy holat
+  if((!d||!d.total)&&date===todayKey()){
+    const tasks=(S.tasks||[]).map(t=>({name:t.name,cat:t.cat,start:t.start,end:t.end,done:!!t.done,deferred:!!t.deferred}));
+    const done=tasks.filter(t=>t.done).length;
+    d={date,tasks,done,total:tasks.length,pct:tasks.length?Math.round(done/tasks.length*100):0};
+  }
+  // 3) Lokal arxiv
+  if(!d||!d.total) d=S.dayHistory?.[date]||null;
+  if(!d||!d.total){
+    title.textContent=date+' — maʼlumot yoʻq';
+    cont.innerHTML='<div style="font-size:12px;color:var(--tx3);padding:10px">Bu kun uchun saqlangan maʼlumot topilmadi.</div>';
+    return;
+  }
+  title.textContent=date+' — '+d.pct+'% bajarildi';
   let html=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-    <div style="text-align:center;padding:12px;background:rgba(var(--Ar),.08);border-radius:10px"><div style="font-size:22px;font-weight:800;color:var(--A)">${d.done}</div><div style="font-size:11px;color:var(--tx2)">Bajarilgan</div></div>
+    <div style="text-align:center;padding:12px;background:rgba(var(--Ar),.08);border-radius:10px"><div style="font-size:22px;font-weight:800;color:var(--A)">${d.done}/${d.total}</div><div style="font-size:11px;color:var(--tx2)">Bajarilgan</div></div>
     <div style="text-align:center;padding:12px;background:rgba(var(--Ar),.08);border-radius:10px"><div style="font-size:22px;font-weight:800;color:var(--A)">${d.pct}%</div><div style="font-size:11px;color:var(--tx2)">Foiz</div></div>
   </div>`;
   html+='<div style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Vazifalar:</div>';
@@ -1764,13 +1790,13 @@ function showDayDetail(date){
     const col=t.done?'var(--A)':t.deferred?'var(--amber)':'var(--tx3)';
     html+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr)">
       <span>${icon}</span>
-      <span style="font-size:12px;color:${col};flex:1">${t.name}</span>
+      <span style="font-size:12px;color:${col};flex:1">${esc(t.name||'')}</span>
       <span style="font-size:10px;color:var(--tx3)">${t.start||''}</span>
     </div>`;
   });
-  document.getElementById('dayDetailContent').innerHTML=html;
-  document.getElementById('dayDetailCard').scrollIntoView({behavior:'smooth'});
+  cont.innerHTML=html;
 }
+
 
 function renderStreak(){
   const row=document.getElementById('streakRow');
