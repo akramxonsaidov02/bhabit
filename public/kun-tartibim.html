@@ -260,13 +260,15 @@ body::before {
 
 /* Edit mode pencil */
 .edit-mode-btn {
-  width:36px; height:36px; border-radius:11px;
+  width:32px; height:32px; border-radius:10px;
   background:var(--glass-bg); border:1px solid var(--glass-bd);
   backdrop-filter:var(--blur);
   display:flex; align-items:center; justify-content:center;
-  cursor:pointer; font-size:16px; color:var(--tx2);
-  transition:all .2s;
+  cursor:pointer; font-size:15px; color:var(--tx2);
+  transition:all .2s; padding:0;
 }
+@media (min-width:560px){ .edit-mode-btn { width:34px; height:34px; } }
+
 .edit-mode-btn.active { background:rgba(var(--accent-rgb),.2); border-color:rgba(var(--accent-rgb),.4); color:var(--accent); }
 
 /* ── CONTENT ── */
