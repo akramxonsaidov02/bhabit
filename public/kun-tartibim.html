@@ -634,14 +634,6 @@ body::before {
   <div class="lock-title" id="lockTitle">Kun Tartibim</div>
   <div class="lock-sub" id="lockSub">Shaxsiy kun rejangizga kiring</div>
 
-  <!-- LOGIN CARD -->
-  <div id="loginCard" class="login-card gl2">
-    <div class="frow"><label class="lbl">Login</label><input class="linp" id="li" type="text" placeholder="loginni kiriting" autocorrect="off" autocapitalize="none"></div>
-    <div class="frow"><label class="lbl">Parol</label><input class="linp" id="lp" type="password" placeholder="••••••••"></div>
-    <div class="lerr" id="lerr"></div>
-    <button class="btn-login" onclick="doLogin()">Kirish</button>
-  </div>
-
   <!-- PIN SETUP (first time) -->
   <div id="pinSetupCard" class="pin-card gl2" style="display:none">
     <div class="pin-setup-text" id="pinSetupText">Tez kirish uchun PIN kod o’rnating. Bu telefon qulflanganda talab qilinadi.</div>
@@ -976,11 +968,9 @@ body::before {
 // ═══════════════════════════════════════
 //  CONSTANTS
 // ═══════════════════════════════════════
-const USERS = {
-  'akramxons':    { pass:'(.akramxons.)',    role:'user'  },
-  'tahrirlayman': { pass:'Tahrirlayman123.', role:'admin' }
-};
-const SECRET_CODE = 'maxfiykod123';
+// SECURITY: no credentials or recovery codes are shipped to the browser.
+// Device authorisation is handled server-side by the QR/PIN gate
+// (see /api/public/gate/*). PIN recovery verifies the master PIN on the server.
 const PRIORITY = { prayer:10, medicine:8, sport:6, work:5, food:4, morning:3, other:2, night:1 };
 const CATS = {
   morning:  { l:'Ertalab',          icon:'🌅', color:'#94a3b8' },
@@ -1109,15 +1099,9 @@ function checkDailyReset(){
 // ═══════════════════════════════════════
 //  LOCK / PIN SYSTEM
 // ═══════════════════════════════════════
-function showLogin(){
-  document.getElementById('loginCard').style.display='block';
-  document.getElementById('pinSetupCard').style.display='none';
-  document.getElementById('pinLockCard').style.display='none';
-  document.getElementById('forgotCard').style.display='none';
-  document.getElementById('lockSub').textContent='Shaxsiy kun rejangizga kiring';
-}
+// Legacy client-side login is removed. Chiqish → PIN qulfiga qaytadi.
+function showLogin(){ showPinLock(); }
 function showPinSetup(){
-  document.getElementById('loginCard').style.display='none';
   document.getElementById('pinSetupCard').style.display='block';
   document.getElementById('pinLockCard').style.display='none';
   document.getElementById('forgotCard').style.display='none';
@@ -1127,7 +1111,6 @@ function showPinSetup(){
   document.getElementById('pinSetupText').textContent='Tez kirish uchun PIN kod o\'rnating (4 ta raqam) yoki standart 0000 dan foydalaning.';
 }
 function showPinLock(){
-  document.getElementById('loginCard').style.display='none';
   document.getElementById('pinSetupCard').style.display='none';
   document.getElementById('pinLockCard').style.display='block';
   document.getElementById('forgotCard').style.display='none';
@@ -1136,7 +1119,6 @@ function showPinLock(){
   updatePinDots('pinLockDots','');
 }
 function showPinForgot(){
-  document.getElementById('loginCard').style.display='none';
   document.getElementById('pinSetupCard').style.display='none';
   document.getElementById('pinLockCard').style.display='none';
   document.getElementById('forgotCard').style.display='block';
@@ -1198,41 +1180,35 @@ function shakeDots(id){
   setTimeout(()=>el.querySelectorAll('.pin-dot').forEach(d=>d.classList.remove('shake')),400);
 }
 
-function checkSecret(){
+async function checkSecret(){
   const v=document.getElementById('secretInp').value.trim();
-  const expected = S.secretCode || SECRET_CODE;
-  if(v===expected){
-    document.getElementById('secretErr').textContent='';
-    S.pinSetupDone=false; persist();
-    showPinSetup();
-    document.getElementById('lockSub').textContent='Yangi PIN kod o\u2019rnating';
-  } else {
-    document.getElementById('secretErr').textContent='Noto\u2019g\u2019ri maxfiy kod';
+  const errEl=document.getElementById('secretErr');
+  if(!v){ errEl.textContent='Maxfiy kodni kiriting'; return; }
+  errEl.textContent='Tekshirilmoqda...';
+  try{
+    const res=await fetch('/api/public/gate/check-master-pin',{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({ pin:v })
+    });
+    const data=await res.json().catch(()=>({}));
+    if(res.ok&&data.ok){
+      errEl.textContent='';
+      S.pinSetupDone=false; persist();
+      showPinSetup();
+      document.getElementById('lockSub').textContent='Yangi PIN kod o\u2019rnating';
+    } else {
+      errEl.textContent='Noto\u2019g\u2019ri maxfiy kod';
+    }
+  }catch(e){
+    errEl.textContent='Tarmoq xatosi, qayta urinib ko\u2019ring';
   }
 }
 
-function doLogin(){
-  const u=document.getElementById('li').value.trim().toLowerCase();
-  const p=document.getElementById('lp').value;
-  const found=USERS[u];
-  if(found&&found.pass===p){
-    document.getElementById('lerr').textContent='';
-    hydrate();
-    // Admin ham endi to'g'ridan-to'g'ri asosiy ilovaga kiradi.
-    // Admin panelga sozlamalar orqali "⚙️ Admin panel" tugmasi bilan o'tiladi.
-    S.isAdmin = (found.role==='admin');
-    try{ persist(); }catch(e){}
-    if(!S.pinSetupDone){ showPinSetup(); }
-    else { enterApp(); }
-  } else {
-    document.getElementById('lerr').textContent='Login yoki parol noto\'g\'ri';
-    document.getElementById('lp').value='';
-  }
-}
 // Sozlamalardan chaqiriladi: admin panelni ochish
 function openAdminPanel(){
   const d=window.__BH_DEVICE__||{};
-  const canAdmin=S.isAdmin||d.role==='admin'||d.role==='sub_admin'||!!(d.permissions&&d.permissions.manage_devices);
+  const canAdmin=d.role==='admin'||d.role==='sub_admin'||!!(d.permissions&&d.permissions.manage_devices);
   if(!canAdmin){ toast('❌ Faqat admin uchun'); return; }
   try{ closeSettings(); }catch(e){}
   window.location.href='/admin';
@@ -1253,9 +1229,7 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 
-document.addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&document.getElementById('loginCard').style.display!=='none') doLogin();
-});
+
 
 // ═══════════════════════════════════════
 //  INIT
@@ -2552,7 +2526,7 @@ function renderSettings(){
   const fonts=[{n:'Inter (asosiy)',v:''},{n:'System',v:'system-ui,-apple-system,sans-serif'},{n:'Serif',v:'Georgia,serif'},{n:'Mono',v:'ui-monospace,monospace'}];
   const langs=[['uz','O\u2019zbek'],['ru','Русский'],['en','English']];
   const dev=window.__BH_DEVICE__||{};
-  const canOpenAdmin=S.isAdmin||dev.role==='admin'||dev.role==='sub_admin'||!!(dev.permissions&&dev.permissions.manage_devices);
+  const canOpenAdmin=dev.role==='admin'||dev.role==='sub_admin'||!!(dev.permissions&&dev.permissions.manage_devices);
   const notifTasks = (S.tasks||[]).map(t=>{
     const on = !S.notifOff || !S.notifOff[t.id];
     return `<label class="st-row"><span>${esc(t.name)}</span><input type="checkbox" ${on?'checked':''} onchange="toggleTaskNotif(${taskIdArg(t.id)},this.checked)"></label>`;
@@ -2835,12 +2809,20 @@ function changePinFlow(){
   const nw2=prompt('Qayta kiriting:'); if(nw!==nw2){ toast('Mos kelmadi'); return; }
   S.pinCode=nw; persist(); toast('\u2705 PIN yangilandi');
 }
-function changeSecretFlow(){
-  const cur=prompt('Joriy maxfiy kod:'); if(cur===null) return;
-  const currentSecret=S.secretCode||SECRET_CODE;
-  if(cur!==currentSecret){ toast('\u274c Noto\u2019g\u2019ri'); return; }
-  const nw=prompt('Yangi maxfiy kod (kamida 6 belgi):'); if(!nw||nw.length<6){ toast('Kamida 6 belgi'); return; }
-  S.secretCode=nw; persist(); toast('\u2705 Yangilandi');
+async function changeSecretFlow(){
+  const cur=prompt('Joriy maxfiy kod (master PIN):'); if(cur===null) return;
+  const nw=prompt('Yangi maxfiy kod (kamida 8 belgi):'); if(!nw||nw.length<8){ toast('Kamida 8 belgi'); return; }
+  const nw2=prompt('Qayta kiriting:'); if(nw!==nw2){ toast('Mos kelmadi'); return; }
+  try{
+    const token=localStorage.getItem('bh_device_token')||'';
+    const res=await fetch('/api/public/gate/change-pin',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-device-token':token},
+      body:JSON.stringify({ oldPin:cur, newPin:nw })
+    });
+    if(res.ok) toast('\u2705 Yangilandi');
+    else toast('\u274c Amalga oshmadi');
+  }catch(e){ toast('\u274c Tarmoq xatosi'); }
 }
 
 /* ══════════════════════════════════════════════════════
