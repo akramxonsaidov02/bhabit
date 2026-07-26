@@ -1354,9 +1354,9 @@ function renderWeekStrip(){
 function selectDay(k){
   if(k>todayKey()){ toast('Kelasi kunlar hali yopiq'); return; }
   S.selectedDate=k; persist(); renderWeekStrip();
-  if(k===todayKey()) toast('Bugungi kun');
-  else showDayDetail(k);
+  showDayDetail(k);
 }
+
 function updateNextP(){
   const p=S.prayers;
   const ls=[{n:'Bomdod',k:'fajr'},{n:'Peshin',k:'dhuhr'},{n:'Asr',k:'asr'},{n:'Shom',k:'maghrib'},{n:'Xufton',k:'isha'}];
