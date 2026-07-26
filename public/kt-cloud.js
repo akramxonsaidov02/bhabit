@@ -201,7 +201,41 @@
     };
   }
 
+  // Fetch a specific day's snapshot from the cloud (tasks + completions of that date)
+  async function fetchDay(date) {
+    if (!state.ready) return null;
+    const sb = state.sb;
+    const userId = state.user.id;
+    const [tasksRes, complRes] = await Promise.all([
+      sb.from("tasks").select("*").eq("user_id", userId).order("sort_order"),
+      sb
+        .from("task_completions")
+        .select("task_id, done")
+        .eq("user_id", userId)
+        .eq("completion_date", date),
+    ]);
+    const doneMap = {};
+    (complRes.data || []).forEach((c) => {
+      doneMap[c.task_id] = !!c.done;
+    });
+    const tasks = (tasksRes.data || []).map((row) => {
+      const t = rowToLocalTask(row);
+      t.done = !!doneMap[row.id];
+      return t;
+    });
+    const total = tasks.length;
+    const done = tasks.filter((t) => t.done).length;
+    return {
+      date,
+      tasks,
+      done,
+      total,
+      pct: total ? Math.round((done / total) * 100) : 0,
+    };
+  }
+
   async function seedFromLocalIfEmpty(localS) {
+
     if (!localS) return false;
     const sb = state.sb;
     const userId = state.user.id;
