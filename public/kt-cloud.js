@@ -483,9 +483,17 @@
   }
 
   async function init(S) {
-    await ensureSupabase();
+    try {
+      await ensureSupabase();
+    } catch (e) {
+      // Viewer / unauthorised device: no credentials granted, cloud stays disabled.
+      state.ready = false;
+      fire("ready", { user: null, deviceId: null, readOnly: true });
+      return { user: null, deviceId: null, readOnly: true };
+    }
     await ensureSession();
     await ensureDevice();
+
 
     // First push local state to cloud if cloud has nothing yet
     await seedFromLocalIfEmpty(S);
