@@ -224,35 +224,51 @@ body::before {
   backdrop-filter:var(--blur2);
   -webkit-backdrop-filter:var(--blur2);
   border-bottom:1px solid var(--bdr2);
-  padding:11px 16px;
-  display:flex; align-items:center; justify-content:space-between;
+  padding:9px 12px;
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
 }
 [data-theme="light"] .topbar { background:rgba(240,240,248,.8); }
-.topbar-left { display:flex; flex-direction:column; gap:1px; }
-.topbar-title { font-size:17px; font-weight:800; color:var(--tx); letter-spacing:-.03em; }
-.topbar-date  { font-size:11px; color:var(--tx2); }
-.topbar-right { display:flex; gap:6px; align-items:center; }
+.topbar-left { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.topbar-title { font-size:16px; font-weight:800; color:var(--tx); letter-spacing:-.03em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.topbar-date  { font-size:10.5px; color:var(--tx2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.topbar-right {
+  display:grid; grid-template-columns:repeat(4,32px); gap:5px;
+  justify-content:end; flex-shrink:0;
+}
+@media (min-width:560px){ .topbar-right { grid-template-columns:repeat(7,34px); } }
 
 .ib {
-  width:36px; height:36px; border-radius:11px;
+  width:32px; height:32px; border-radius:10px;
   background:var(--glass-bg); border:1px solid var(--glass-bd);
   backdrop-filter:var(--blur);
   display:flex; align-items:center; justify-content:center;
-  cursor:pointer; font-size:16px; color:var(--tx2);
-  transition:all .2s;
+  cursor:pointer; font-size:15px; color:var(--tx2);
+  transition:all .2s; padding:0;
 }
+@media (min-width:560px){ .ib { width:34px; height:34px; } }
 .ib:hover { background:var(--glass-bg2); color:var(--tx); transform:scale(1.05); }
 .ib:active { transform:scale(.9); }
+/* Funksiya o'chirilgan holat: xira + chizib qo'yilgan */
+.ib.disabled-fn {
+  opacity:.38; position:relative; cursor:not-allowed; filter:grayscale(1);
+}
+.ib.disabled-fn::after{
+  content:''; position:absolute; left:14%; right:14%; top:50%;
+  height:1.6px; background:var(--red,#ef4444); transform:rotate(-45deg); border-radius:2px;
+}
+
 
 /* Edit mode pencil */
 .edit-mode-btn {
-  width:36px; height:36px; border-radius:11px;
+  width:32px; height:32px; border-radius:10px;
   background:var(--glass-bg); border:1px solid var(--glass-bd);
   backdrop-filter:var(--blur);
   display:flex; align-items:center; justify-content:center;
-  cursor:pointer; font-size:16px; color:var(--tx2);
-  transition:all .2s;
+  cursor:pointer; font-size:15px; color:var(--tx2);
+  transition:all .2s; padding:0;
 }
+@media (min-width:560px){ .edit-mode-btn { width:34px; height:34px; } }
+
 .edit-mode-btn.active { background:rgba(var(--accent-rgb),.2); border-color:rgba(var(--accent-rgb),.4); color:var(--accent); }
 
 /* ── CONTENT ── */
@@ -405,7 +421,9 @@ body::before {
 .tag-deferred { background:rgba(245,158,11,.12); color:var(--amber); }
 .tag-priority { background:rgba(239,68,68,.12); color:var(--red); }
 
-.tc-actions { display:flex; align-items:center; padding:0 6px; gap:2px; opacity:0; transition:opacity .15s; border-left:1px solid var(--bdr); flex-shrink:0; }
+.tc-actions { display:flex; align-items:center; padding:0 6px; gap:2px; opacity:1; transition:opacity .15s; border-left:1px solid var(--bdr); flex-shrink:0; }
+@media (hover:hover) and (pointer:fine){ .tc-actions { opacity:0; } }
+
 .ta-b {
   width:28px; height:28px; border-radius:8px; border:none;
   background:none; cursor:pointer; font-size:13px;
@@ -434,6 +452,21 @@ body::before {
 }
 .fab:hover { transform:translateY(-2px) scale(1.05); box-shadow:0 12px 32px rgba(var(--accent-rgb),.5); }
 .fab:active { transform:scale(.92); }
+
+/* Ovozli qo'shish tugmasi — "+" ning ustida, unga xalaqit bermaydi */
+#ktMicFab {
+  position:fixed; right:16px; bottom:calc(142px + var(--safe-bottom)); z-index:400;
+  width:46px; height:46px; border-radius:15px; border:none;
+  background:linear-gradient(145deg,#a78bfa,#7c3aed);
+  color:#fff; font-size:20px;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 6px 20px rgba(124,58,237,.45), inset 0 1px 0 rgba(255,255,255,.2);
+  cursor:pointer; transition:all .2s;
+}
+#ktMicFab.rec { background:#ef4444; box-shadow:0 6px 20px rgba(239,68,68,.5); }
+#ktMicFab:active { transform:scale(.92); }
+body.page-not-home #ktMicFab, body.page-not-home .fab { display:none !important; }
+
 
 /* ── BOTTOM NAV ── */
 .bnav {
@@ -701,7 +734,7 @@ body::before {
       <button class="edit-mode-btn" id="editModeBtn" onclick="toggleEditMode()" title="Tahrirlash rejimi">✏️</button>
       <button class="ib" id="notifBtn" onclick="toggleNotifications()" title="Bildirishnomalar">🔕</button>
       <button class="ib" id="themeBtn" onclick="toggleTheme()">🌙</button>
-      <button class="ib" onclick="refreshPrayer()" title="Namoz vaqtlarini yangilash">🔄</button>
+      <button class="ib" id="prayerRefreshBtn" onclick="refreshPrayer()" title="Namoz vaqtlarini yangilash">🔄</button>
       <button class="ib" onclick="openSettings()" title="Sozlamalar">⚙️</button>
       <button class="ib" id="lockBtn" onclick="lockNow()" title="Qulflash">🔒</button>
     </div>
@@ -783,7 +816,7 @@ body::before {
     <button class="nb on" id="nb0" onclick="goPage('home')"><span class="nb-i">⊞</span>Asosiy</button>
     <button class="nb" id="nb1" onclick="goPage('stats')"><span class="nb-i">◎</span>Statistika</button>
     <button class="nb" id="nb2" onclick="window.KTExtras&&window.KTExtras.startVoice&&window.KTExtras.startVoice()"><span class="nb-i">🎤</span>Ovoz</button>
-    <button class="nb" id="nb3" onclick="openSettings()"><span class="nb-i">⚙️</span>Sozlama</button>
+    
     <button class="nb" onclick="confirmLogout()"><span class="nb-i">⎋</span>Chiqish</button>
   </div>
 </div>
@@ -1054,13 +1087,24 @@ function hydrate(){
   S.tasks=S.tasks.map((t,i)=>({...t,order:t.order??i,autoDetectType:t.autoDetectType||'none'}));
   if(!S.activityLog) S.activityLog=[];
   if(!S.dayHistory) S.dayHistory={};
-  if(!S.selectedDate) S.selectedDate=todayKey();
+  if(!S.completions||typeof S.completions!=='object') S.completions={};
   if(S.showQibla===undefined) S.showQibla=true;
   if(S.showBreath===undefined) S.showBreath=true;
   if(S.showMotionDetect===undefined) S.showMotionDetect=true;
   if(S.autoShiftDayStart===undefined) S.autoShiftDayStart=true;
   if(S.autoShiftPrayer===undefined) S.autoShiftPrayer=true;
+  // Migratsiya: eski versiyada belgilashlar task.done ichida edi → bugungi kunga ko'chiramiz
+  const t0=todayKey();
+  if(!S.completions[S.lastResetDate||t0]){
+    const day={};
+    (S.tasks||[]).forEach(t=>{ if(t.done) day[taskKey(t)]=true; });
+    if(Object.keys(day).length) S.completions[S.lastResetDate||t0]=day;
+  }
+  // Har doim bugundan boshlaymiz (kechagi tanlangan kun yopishib qolmasin)
+  S.selectedDate=t0;
   checkDailyReset();
+  pruneCompletions();
+  applyDayView();
 }
 
 function todayKey(){
@@ -1068,32 +1112,61 @@ function todayKey(){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
+// ── KUNLIK BELGILASHLAR (har bir kun alohida saqlanadi) ──
+function taskKey(t){ return String((t&&(t.cloudId||t.id))||''); }
+function activeDate(){ return S.selectedDate||todayKey(); }
+function isToday(){ return activeDate()===todayKey(); }
+function dayMap(date){
+  if(!S.completions) S.completions={};
+  if(!S.completions[date]) S.completions[date]={};
+  return S.completions[date];
+}
+// Tanlangan kundagi holatni ko'rinadigan `done` maydoniga ko'chiradi
+function applyDayView(){
+  const map=dayMap(activeDate());
+  (S.tasks||[]).forEach(t=>{ t.done=!!map[taskKey(t)]; });
+  window.__KT_ACTIVE_DATE__=activeDate();
+}
+function setDone(t,done){
+  const map=dayMap(activeDate());
+  const k=taskKey(t);
+  if(done) map[k]=true; else delete map[k];
+  t.done=!!done;
+}
+// 7 kundan oshgan kunlarni tozalaymiz (talab: hafta davomida saqlanadi)
+function pruneCompletions(){
+  const keep=new Set();
+  for(let i=0;i<8;i++){ const d=new Date(); d.setDate(d.getDate()-i); keep.add(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')); }
+  Object.keys(S.completions||{}).forEach(k=>{ if(!keep.has(k)) delete S.completions[k]; });
+}
+
 function checkDailyReset(){
   const today=todayKey();
   if(S.lastResetDate===today) return;
-  // Archive yesterday before reset
-  if(S.lastResetDate && S.tasks && S.tasks.length){
+  // Kechagi kunni arxivga olamiz (belgilashlar S.completions da saqlanib qoladi)
+  const prev=S.lastResetDate;
+  if(prev && S.tasks && S.tasks.length){
+    const map=(S.completions&&S.completions[prev])||{};
+    const done=(S.tasks||[]).filter(t=>map[taskKey(t)]).length;
+    const total=S.tasks.length;
     const snap={
-      date:S.lastResetDate,
-      done:S.tasks.filter(t=>t.done).length,
-      total:S.tasks.length,
-      pct:Math.round(S.tasks.filter(t=>t.done).length/S.tasks.length*100),
-      tasks:S.tasks.map(t=>({id:t.id,name:t.name,cat:t.cat,start:t.start,end:t.end,done:t.done,deferred:t.deferred}))
+      date:prev, done, total,
+      pct:total?Math.round(done/total*100):0,
+      tasks:S.tasks.map(t=>({id:t.id,cloudId:t.cloudId,name:t.name,cat:t.cat,start:t.start,end:t.end,done:!!map[taskKey(t)],deferred:false}))
     };
     if(!S.dayHistory) S.dayHistory={};
-    S.dayHistory[S.lastResetDate]=snap;
-    // Keep 30 days max
+    S.dayHistory[prev]=snap;
     const keys=Object.keys(S.dayHistory).sort().reverse();
     if(keys.length>30) keys.slice(30).forEach(k=>delete S.dayHistory[k]);
-    // Streak
-    if(snap.pct>=50) S.streak=(S.streak||0)+1;
-    else S.streak=0;
+    if(snap.pct>=50) S.streak=(S.streak||0)+1; else S.streak=0;
   }
-  // New day — reset all tasks
+  // Yangi kun — vazifalar o'zi saqlanadi, faqat kunlik holat bo'sh boshlanadi
   S.tasks=(S.tasks||[]).map(t=>({...t,done:false,autoChecked:false,deferred:false}));
   S.water=0; S.steps=0;
   S.lastResetDate=today;
+  S.selectedDate=today;
 }
+
 
 
 // ═══════════════════════════════════════
@@ -1291,10 +1364,11 @@ function parsePrayerHtml(html){
   return null;
 }
 
-function refreshPrayer(){ S.prayersManual=false; persist(); toast('🔄 Yangilanmoqda...'); fetchPrayers(true); }
+function refreshPrayer(){ if(S.prayersManual){ toast('🔒 Qoʻlda sozlash yoqilgan — sozlamadan oʻchiring'); return; } S.prayersManual=false; persist(); toast('🔄 Yangilanmoqda...'); fetchPrayers(true); }
 
 function t2m(t){ if(!t)return 0; const[h,m]=t.split(':').map(Number); return h*60+(m||0); }
 
+function syncPrayerBtnState(){ const b=document.getElementById('prayerRefreshBtn'); if(b) b.classList.toggle('disabled-fn', !!S.prayersManual); }
 function renderPrayers(){
   const p=S.prayers;
   const keys=['fajr','dhuhr','asr','maghrib','isha'];
@@ -1309,6 +1383,8 @@ function renderPrayers(){
   if(cur>=0) document.getElementById('pp-'+keys[cur]).classList.add('cur');
   updateNextP();
   renderWeekStrip();
+  syncPrayerBtnState();
+  if(typeof renderDayBanner==='function') renderDayBanner();
 }
 
 function renderWeekStrip(){
@@ -1325,11 +1401,49 @@ function renderWeekStrip(){
     return `<button class="week-day ${k===selected?'on':''}" ${future?'disabled':''} onclick="selectDay('${k}')"><span>${name}</span><strong>${d.getDate()}</strong></button>`;
   }).join('');
 }
-function selectDay(k){
+// Kalendardan kun tanlash: shu kunning belgilashlari asosiy ro'yxatda chiqadi
+async function selectDay(k){
   if(k>todayKey()){ toast('Kelasi kunlar hali yopiq'); return; }
-  S.selectedDate=k; persist(); renderWeekStrip();
-  showDayDetail(k);
+  S.selectedDate=k;
+  window.__KT_ACTIVE_DATE__=k;
+  applyDayView();
+  renderWeekStrip();
+  goPage('home');
+  renderSchedule();
+  renderDayBanner();
+  persist();
+  // Bulutdan shu kunning haqiqiy belgilashlarini olib kelamiz
+  try{
+    if(window.KTCloud&&window.KTCloud.isReady&&window.KTCloud.isReady()&&window.KTCloud.fetchDay){
+      const d=await window.KTCloud.fetchDay(k);
+      if(d&&Array.isArray(d.tasks)&&S.selectedDate===k){
+        const map=dayMap(k);
+        d.tasks.forEach(t=>{ const key=String(t.cloudId||t.id||''); if(!key) return; if(t.done) map[key]=true; else delete map[key]; });
+        applyDayView(); renderSchedule(); renderDayBanner(); persist();
+      }
+    }
+  }catch(e){ console.error('fetchDay',e); }
 }
+
+// "O'tgan kunni ko'rib turasiz" bandi
+function renderDayBanner(){
+  let el=document.getElementById('dayBanner');
+  const host=document.getElementById('pgHome');
+  if(!host) return;
+  if(!el){
+    el=document.createElement('div');
+    el.id='dayBanner';
+    el.style.cssText='display:none;align-items:center;gap:8px;margin-bottom:10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(245,158,11,.35);background:rgba(245,158,11,.10);font-size:12px;color:var(--tx)';
+    host.insertBefore(el,host.firstChild);
+  }
+  if(isToday()){ el.style.display='none'; return; }
+  const d=new Date(activeDate()+'T00:00:00');
+  const days=['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'];
+  el.style.display='flex';
+  el.innerHTML=`<span>📅 <b>${days[d.getDay()]}, ${activeDate()}</b> — o‘tgan kun ko‘rsatilmoqda. Belgilashlar shu kunga yoziladi.</span>
+    <button onclick="selectDay('${todayKey()}')" style="margin-left:auto;padding:6px 10px;border-radius:8px;border:1px solid var(--bdr2);background:var(--glass-bg2);color:var(--tx);font-weight:600;cursor:pointer;font-family:inherit;font-size:11px;white-space:nowrap">Bugunga</button>`;
+}
+
 
 function updateNextP(){
   const p=S.prayers;
@@ -1460,7 +1574,7 @@ function updateProgress(){
   const circ=157;
   document.getElementById('prFg').style.strokeDashoffset=circ-(circ*pct/100);
   document.getElementById('prPct').textContent=pct+'%';
-  document.getElementById('progH').textContent=pct===100?'🎉 Hammasi bajarildi!':'Bugungi vazifalar';
+  document.getElementById('progH').textContent=pct===100?'🎉 Hammasi bajarildi!':(isToday()?'Bugungi vazifalar':activeDate()+' vazifalari');
   document.getElementById('progS').textContent=`${don} bajarildi · ${tot-don} qoldi · ${tot} jami`;
   document.getElementById('progFill').style.width=pct+'%';
 }
@@ -1711,7 +1825,7 @@ function dayRowHTML(date,d){
   const pct=d?d.pct:null;
   const color=pct==null?'var(--tx3)':pct>=80?'var(--A)':pct>=50?'var(--amber)':'var(--red)';
   const label=date.split('-').slice(1).join('/');
-  return `<div id="dh-${date}" onclick="showDayDetail('${date}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;margin-bottom:4px">
+  return `<div id="dh-${date}" onclick="selectDay('${date}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;margin-bottom:4px">
       <div style="width:40px;font-size:11px;font-weight:700;color:var(--tx2);text-align:right">${label}</div>
       <div style="flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden"><div style="height:6px;width:${pct||0}%;background:${color};border-radius:99px"></div></div>
       <div style="width:36px;font-size:11px;font-weight:700;color:${color};text-align:right">${pct==null?'—':pct+'%'}</div>
@@ -2329,14 +2443,16 @@ function updateClock(){
 }
 function toggleTask(id){
   const t=taskById(id); if(!t) return;
-  t.done=!t.done;
+  const date=activeDate();
+  setDone(t,!t.done);
   if(!S.activityLog) S.activityLog=[];
-  S.activityLog.unshift({t:Date.now(),msg:(t.done?'✅ ':'↩️ ')+t.name});
+  S.activityLog.unshift({t:Date.now(),msg:(t.done?'✅ ':'↩️ ')+t.name+(date===todayKey()?'':' ('+date+')')});
   S.activityLog=S.activityLog.slice(0,200);
   persist(); renderSchedule(); updateProgress(); renderStreak && renderStreak();
-  if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.saveTaskCompletion(t,t.done);
+  if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.saveTaskCompletion(t,t.done,date);
   if(typeof haptic==='function') haptic('light');
 }
+
 document.addEventListener('click',function(e){
   const check=e.target.closest&&e.target.closest('.tc-check');
   if(!check) return;
@@ -2350,10 +2466,12 @@ function goPage(page){
   const home=document.getElementById('pgHome'), stats=document.getElementById('pgStats');
   if(home) home.style.display=page==='home'?'block':'none';
   if(stats) stats.style.display=page==='stats'?'block':'none';
+  document.body.classList.toggle('page-not-home',page!=='home');
   document.querySelectorAll('.bnav .nb').forEach(b=>b.classList.remove('on'));
   const active=document.getElementById(page==='stats'?'nb1':'nb0'); if(active) active.classList.add('on');
   if(page==='stats') renderStats();
 }
+
 function renderStats(){
   const el=document.getElementById('statsContent'); if(!el) return;
   const tot=S.tasks.length, don=S.tasks.filter(t=>t.done).length, pct=tot?Math.round(don/tot*100):0;
@@ -2613,7 +2731,7 @@ function renderSettings(){
         <input type="number" min="-30" max="30" value="${S.prayerOffset||0}" class="st-sel" style="width:70px" onchange="S.prayerOffset=Number(this.value);persist()">
       </div>
       <div class="st-row"><span><b>Qoʻlda saqlangan</b><br><span style="font-size:11px;color:var(--tx2)">Yoqilsa — internetdan avto-yangilanmaydi</span></span>
-        <input type="checkbox" ${S.prayersManual?'checked':''} onchange="S.prayersManual=this.checked;persist();toast(this.checked?'\ud83d\udd12 Qoʻlda saqlandi':'\ud83d\udd04 Avto-yangilash yoqildi')">
+        <input type="checkbox" ${S.prayersManual?'checked':''} onchange="S.prayersManual=this.checked;persist();syncPrayerBtnState();toast(this.checked?'\ud83d\udd12 Qoʻlda saqlandi':'\ud83d\udd04 Avto-yangilash yoqildi')">
       </div>
       <div class="st-row"><span>Vaqtlarni tahrirlash</span><button onclick="closeSettings();openPrayerEdit()">Ochish</button></div>
       <div class="st-row"><span>Internet orqali yangilash</span><button onclick="S.prayersManual=false;persist();fetchPrayers(true);toast('\ud83d\udd04 Yangilanmoqda')">Yangilash</button></div>
