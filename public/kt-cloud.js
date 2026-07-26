@@ -2,9 +2,28 @@
 // Anonymous auth + real-time sync of tasks, settings, devices across devices.
 // Exposes window.KTCloud with methods used by kun-tartibim.html.
 (function () {
-  const SUPABASE_URL = "https://usjbabodcopscwlcqmoa.supabase.co";
-  const SUPABASE_ANON_KEY =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzamJhYm9kY29wc2N3bGNxbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2MDY1NzAsImV4cCI6MjEwMDE4MjU3MH0.P10Jjvfi62KKCEMTGcR8Ma7R0iHGKNNeaIsgKyezywc";
+  // SECURITY: no sync credentials are embedded in client code. They are fetched from
+  // /api/public/gate/sync-config, which verifies the device token server-side and
+  // refuses to hand out credentials to read-only ("viewer") devices. A viewer therefore
+  // has no way to write, even if the client-side flag is tampered with in devtools.
+  let SYNC_CONFIG = null;
+
+  async function loadSyncConfig() {
+    if (SYNC_CONFIG) return SYNC_CONFIG;
+    const token = localStorage.getItem("bh_device_token");
+    const res = await fetch("/api/public/gate/sync-config", {
+      headers: token ? { "x-device-token": token } : {},
+    });
+    if (!res.ok) throw new Error("Sinxronizatsiya ruxsati yo'q");
+    const data = await res.json();
+    if (data.readOnly || !data.url || !data.key) {
+      window.__BH_VIEWER__ = true;
+      throw new Error("readonly");
+    }
+    SYNC_CONFIG = { url: data.url, key: data.key };
+    return SYNC_CONFIG;
+  }
+
 
   const state = {
     sb: null,
@@ -63,7 +82,8 @@
     if (!window.supabase || !window.supabase.createClient) {
       throw new Error("Supabase SDK yuklanmadi");
     }
-    state.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const cfg = await loadSyncConfig();
+    state.sb = window.supabase.createClient(cfg.url, cfg.key, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -463,9 +483,17 @@
   }
 
   async function init(S) {
-    await ensureSupabase();
+    try {
+      await ensureSupabase();
+    } catch (e) {
+      // Viewer / unauthorised device: no credentials granted, cloud stays disabled.
+      state.ready = false;
+      fire("ready", { user: null, deviceId: null, readOnly: true });
+      return { user: null, deviceId: null, readOnly: true };
+    }
     await ensureSession();
     await ensureDevice();
+
 
     // First push local state to cloud if cloud has nothing yet
     await seedFromLocalIfEmpty(S);
