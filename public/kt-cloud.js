@@ -518,6 +518,8 @@
     saveTaskCompletion,
     pushSettings,
     syncTasks,
+    fetchDay,
+
     listDevices,
     removeDevice,
     isViewer,
