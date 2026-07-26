@@ -168,7 +168,6 @@
     fab.id='ktMicFab';
     fab.title='Ovozli qo\'shish';
     fab.innerHTML='🎤';
-    fab.style.cssText='position:fixed;right:16px;bottom:80px;width:56px;height:56px;border-radius:50%;border:none;background:linear-gradient(135deg,#a78bfa,#22c55e);color:#fff;font-size:24px;box-shadow:0 6px 20px rgba(167,139,250,.5);cursor:pointer;z-index:900;display:flex;align-items:center;justify-content:center';
     fab.onclick = startVoice;
     document.body.appendChild(fab);
   }
@@ -186,17 +185,17 @@
       rec = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : undefined });
       rec.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
       rec.onstop = async ()=>{
-        if(fab){ fab.style.background='linear-gradient(135deg,#a78bfa,#22c55e)'; fab.innerHTML='🎤'; }
+        if(fab){ fab.classList.remove('rec'); fab.innerHTML='🎤'; }
         try{ stream && stream.getTracks().forEach(t=>t.stop()); }catch(e){}
         const blob = new Blob(chunks, { type:'audio/webm' });
         await transcribeAndProcess(blob);
       };
       rec.start();
-      if(fab){ fab.style.background='#ef4444'; fab.innerHTML='■'; }
+      if(fab){ fab.classList.add('rec'); fab.innerHTML='■'; }
       window.toast && window.toast('🎤 Gapiring, tugatish uchun yana bosing');
       setTimeout(()=>{ try{ if(rec && rec.state==='recording') rec.stop(); }catch(e){} }, 30000);
     }catch(e){
-      if(fab){ fab.style.background='linear-gradient(135deg,#a78bfa,#22c55e)'; fab.innerHTML='🎤'; }
+      if(fab){ fab.classList.remove('rec'); fab.innerHTML='🎤'; }
       window.toast && window.toast('❌ Mikrofon ruxsati kerak');
     }
   }

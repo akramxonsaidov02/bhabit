@@ -1364,10 +1364,11 @@ function parsePrayerHtml(html){
   return null;
 }
 
-function refreshPrayer(){ S.prayersManual=false; persist(); toast('🔄 Yangilanmoqda...'); fetchPrayers(true); }
+function refreshPrayer(){ if(S.prayersManual){ toast('🔒 Qoʻlda sozlash yoqilgan — sozlamadan oʻchiring'); return; } S.prayersManual=false; persist(); toast('🔄 Yangilanmoqda...'); fetchPrayers(true); }
 
 function t2m(t){ if(!t)return 0; const[h,m]=t.split(':').map(Number); return h*60+(m||0); }
 
+function syncPrayerBtnState(){ const b=document.getElementById('prayerRefreshBtn'); if(b) b.classList.toggle('disabled-fn', !!S.prayersManual); }
 function renderPrayers(){
   const p=S.prayers;
   const keys=['fajr','dhuhr','asr','maghrib','isha'];
@@ -1382,6 +1383,8 @@ function renderPrayers(){
   if(cur>=0) document.getElementById('pp-'+keys[cur]).classList.add('cur');
   updateNextP();
   renderWeekStrip();
+  syncPrayerBtnState();
+  if(typeof renderDayBanner==='function') renderDayBanner();
 }
 
 function renderWeekStrip(){
@@ -1822,7 +1825,7 @@ function dayRowHTML(date,d){
   const pct=d?d.pct:null;
   const color=pct==null?'var(--tx3)':pct>=80?'var(--A)':pct>=50?'var(--amber)':'var(--red)';
   const label=date.split('-').slice(1).join('/');
-  return `<div id="dh-${date}" onclick="showDayDetail('${date}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;margin-bottom:4px">
+  return `<div id="dh-${date}" onclick="selectDay('${date}')" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;margin-bottom:4px">
       <div style="width:40px;font-size:11px;font-weight:700;color:var(--tx2);text-align:right">${label}</div>
       <div style="flex:1;height:6px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden"><div style="height:6px;width:${pct||0}%;background:${color};border-radius:99px"></div></div>
       <div style="width:36px;font-size:11px;font-weight:700;color:${color};text-align:right">${pct==null?'—':pct+'%'}</div>
@@ -2728,7 +2731,7 @@ function renderSettings(){
         <input type="number" min="-30" max="30" value="${S.prayerOffset||0}" class="st-sel" style="width:70px" onchange="S.prayerOffset=Number(this.value);persist()">
       </div>
       <div class="st-row"><span><b>Qoʻlda saqlangan</b><br><span style="font-size:11px;color:var(--tx2)">Yoqilsa — internetdan avto-yangilanmaydi</span></span>
-        <input type="checkbox" ${S.prayersManual?'checked':''} onchange="S.prayersManual=this.checked;persist();toast(this.checked?'\ud83d\udd12 Qoʻlda saqlandi':'\ud83d\udd04 Avto-yangilash yoqildi')">
+        <input type="checkbox" ${S.prayersManual?'checked':''} onchange="S.prayersManual=this.checked;persist();syncPrayerBtnState();toast(this.checked?'\ud83d\udd12 Qoʻlda saqlandi':'\ud83d\udd04 Avto-yangilash yoqildi')">
       </div>
       <div class="st-row"><span>Vaqtlarni tahrirlash</span><button onclick="closeSettings();openPrayerEdit()">Ochish</button></div>
       <div class="st-row"><span>Internet orqali yangilash</span><button onclick="S.prayersManual=false;persist();fetchPrayers(true);toast('\ud83d\udd04 Yangilanmoqda')">Yangilash</button></div>

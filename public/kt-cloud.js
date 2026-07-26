@@ -205,7 +205,7 @@
       sb.from("task_completions")
         .select("task_id, done")
         .eq("user_id", userId)
-        .eq("completion_date", todayISO()),
+        .eq("completion_date", (typeof window!=="undefined" && window.__KT_ACTIVE_DATE__) || todayISO()),
     ]);
     const tasks = (tasksRes.data || []).map(rowToLocalTask);
     const doneMap = {};
@@ -350,7 +350,7 @@
     await state.sb.from("tasks").delete().eq("id", task.cloudId);
   }
 
-  async function saveTaskCompletion(task, done) {
+  async function saveTaskCompletion(task, done, date) {
     if (!state.ready || !task || !task.cloudId || isViewer()) return;
     markPending("completions:" + task.cloudId, 4000);
     markPending("completions", 2500);
@@ -358,7 +358,7 @@
       {
         user_id: state.user.id,
         task_id: task.cloudId,
-        completion_date: todayISO(),
+        completion_date: date || (typeof window!=='undefined' && window.__KT_ACTIVE_DATE__) || todayISO(),
         done: !!done,
         completed_at: done ? new Date().toISOString() : null,
       },
