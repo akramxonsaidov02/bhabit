@@ -224,25 +224,39 @@ body::before {
   backdrop-filter:var(--blur2);
   -webkit-backdrop-filter:var(--blur2);
   border-bottom:1px solid var(--bdr2);
-  padding:11px 16px;
-  display:flex; align-items:center; justify-content:space-between;
+  padding:9px 12px;
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
 }
 [data-theme="light"] .topbar { background:rgba(240,240,248,.8); }
-.topbar-left { display:flex; flex-direction:column; gap:1px; }
-.topbar-title { font-size:17px; font-weight:800; color:var(--tx); letter-spacing:-.03em; }
-.topbar-date  { font-size:11px; color:var(--tx2); }
-.topbar-right { display:flex; gap:6px; align-items:center; }
+.topbar-left { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.topbar-title { font-size:16px; font-weight:800; color:var(--tx); letter-spacing:-.03em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.topbar-date  { font-size:10.5px; color:var(--tx2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.topbar-right {
+  display:grid; grid-template-columns:repeat(4,32px); gap:5px;
+  justify-content:end; flex-shrink:0;
+}
+@media (min-width:560px){ .topbar-right { grid-template-columns:repeat(7,34px); } }
 
 .ib {
-  width:36px; height:36px; border-radius:11px;
+  width:32px; height:32px; border-radius:10px;
   background:var(--glass-bg); border:1px solid var(--glass-bd);
   backdrop-filter:var(--blur);
   display:flex; align-items:center; justify-content:center;
-  cursor:pointer; font-size:16px; color:var(--tx2);
-  transition:all .2s;
+  cursor:pointer; font-size:15px; color:var(--tx2);
+  transition:all .2s; padding:0;
 }
+@media (min-width:560px){ .ib { width:34px; height:34px; } }
 .ib:hover { background:var(--glass-bg2); color:var(--tx); transform:scale(1.05); }
 .ib:active { transform:scale(.9); }
+/* Funksiya o'chirilgan holat: xira + chizib qo'yilgan */
+.ib.disabled-fn {
+  opacity:.38; position:relative; cursor:not-allowed; filter:grayscale(1);
+}
+.ib.disabled-fn::after{
+  content:''; position:absolute; left:14%; right:14%; top:50%;
+  height:1.6px; background:var(--red,#ef4444); transform:rotate(-45deg); border-radius:2px;
+}
+
 
 /* Edit mode pencil */
 .edit-mode-btn {
