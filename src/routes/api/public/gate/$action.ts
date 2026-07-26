@@ -10,6 +10,7 @@ import {
   adminExists,
   hasPermission,
   getAdmin,
+  syncCredentials,
 } from "@/lib/gate.server";
 
 // One splat route handles every gate action: /api/public/gate/<action>
@@ -33,6 +34,8 @@ async function handle(request: Request, action: string, method: string): Promise
     if (action === "devices" && method === "GET") return await listDevices(request);
     if (action === "revoke" && method === "POST") return await revoke(request);
     if (action === "change-pin" && method === "POST") return await changePin(request);
+    if (action === "check-master-pin" && method === "POST") return await checkMasterPin(request);
+    if (action === "sync-config" && method === "GET") return await syncConfig(request);
     return json({ error: "not_found" }, 404);
   } catch (err) {
     console.error("[gate]", action, err);
@@ -257,4 +260,31 @@ async function changePin(request: Request) {
     .eq("id", 1);
   if (error) return json({ error: "server_error" }, 500);
   return json({ ok: true });
+}
+
+// Verifies the master PIN WITHOUT minting a device token. Used for local PIN recovery,
+// so no recovery secret has to ship inside client-side JavaScript.
+async function checkMasterPin(request: Request) {
+  const body = await request.json().catch(() => ({}));
+  const { pin } = body as { pin?: string };
+  if (!pin) return json({ error: "invalid_params" }, 400);
+  const db = await getAdmin();
+  const { data: cfg } = await db.from("app_admin_config").select("pin_hash").eq("id", 1).maybeSingle();
+  if (!cfg || cfg.pin_hash !== sha256(pin)) return json({ error: "invalid_pin" }, 401);
+  return json({ ok: true });
+}
+
+// Sync credentials are handed out server-side only, after the device token has been
+// checked against the database. Read-only ("viewer") devices never receive the
+// credentials, so the read-only restriction can no longer be flipped from devtools.
+async function syncConfig(request: Request) {
+  const token = extractToken(request);
+  const device = await findDeviceByToken(token);
+  if (!device) return json({ error: "forbidden" }, 403);
+  if (device.role === "viewer") {
+    return json({ readOnly: true, role: device.role });
+  }
+  const cfg = syncCredentials();
+  if (!cfg) return json({ error: "not_configured" }, 503);
+  return json({ readOnly: false, role: device.role, url: cfg.url, key: cfg.key });
 }

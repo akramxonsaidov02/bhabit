@@ -92,3 +92,16 @@ export function hasPermission(
   if (device.role === "sub_admin") return !!device.permissions?.[key];
   return false;
 }
+
+// Sync backend credentials for the schedule data store. Kept server-side and released
+// only to devices whose role allows writing (see the sync-config gate action).
+const SYNC_URL = "https://usjbabodcopscwlcqmoa.supabase.co";
+const SYNC_PUBLISHABLE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzamJhYm9kY29wc2N3bGNxbW9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ2MDY1NzAsImV4cCI6MjEwMDE4MjU3MH0.P10Jjvfi62KKCEMTGcR8Ma7R0iHGKNNeaIsgKyezywc";
+
+export function syncCredentials(): { url: string; key: string } | null {
+  const url = process.env.KT_SYNC_URL || SYNC_URL;
+  const key = process.env.KT_SYNC_PUBLISHABLE_KEY || SYNC_PUBLISHABLE_KEY;
+  if (!url || !key) return null;
+  return { url, key };
+}
