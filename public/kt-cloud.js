@@ -82,7 +82,8 @@
     if (!window.supabase || !window.supabase.createClient) {
       throw new Error("Supabase SDK yuklanmadi");
     }
-    state.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const cfg = await loadSyncConfig();
+    state.sb = window.supabase.createClient(cfg.url, cfg.key, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
