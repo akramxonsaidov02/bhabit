@@ -1571,7 +1571,7 @@ function updateProgress(){
   const circ=157;
   document.getElementById('prFg').style.strokeDashoffset=circ-(circ*pct/100);
   document.getElementById('prPct').textContent=pct+'%';
-  document.getElementById('progH').textContent=pct===100?'🎉 Hammasi bajarildi!':'Bugungi vazifalar';
+  document.getElementById('progH').textContent=pct===100?'🎉 Hammasi bajarildi!':(isToday()?'Bugungi vazifalar':activeDate()+' vazifalari');
   document.getElementById('progS').textContent=`${don} bajarildi · ${tot-don} qoldi · ${tot} jami`;
   document.getElementById('progFill').style.width=pct+'%';
 }
