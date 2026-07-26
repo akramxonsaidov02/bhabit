@@ -50,24 +50,55 @@ export const Route = createFileRoute("/api/voice-transcribe")({
         const ext = extMap[type] || "webm";
         const filename = `recording.${ext}`;
 
-        const upstream = new FormData();
-        upstream.append("file", file, filename);
-        upstream.append("model", "openai/gpt-4o-transcribe");
-        // Uzbek — ISO-639-1
-        upstream.append("language", "uz");
+        async function callGateway(model: string) {
+          const upstream = new FormData();
+          upstream.append("file", file as Blob, filename);
+          upstream.append("model", model);
+          // Diqqat: `language` yubormaymiz — model o'zi aniqlaydi.
+          // (ba'zi kodlar, jumladan "uz", provider tomonidan 400 bilan rad etiladi)
+          upstream.append(
+            "prompt",
+            "Ovoz o'zbek tilida. Matnni o'zbek lotin alifbosida yozing.",
+          );
+          const r = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${apiKey}` },
+            body: upstream,
+          });
+          return { r, body: await r.text() };
+        }
 
-        const res = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}` },
-          body: upstream,
-        });
-        const text = await res.text();
+        let res: Response;
+        let text: string;
+        try {
+          const first = await callGateway("openai/gpt-4o-transcribe");
+          res = first.r;
+          text = first.body;
+          if (!res.ok && res.status === 400) {
+            // Ba'zi audio formatlarda katta model rad etadi — mini bilan qayta urinamiz
+            const second = await callGateway("openai/gpt-4o-mini-transcribe");
+            res = second.r;
+            text = second.body;
+          }
+        } catch (e) {
+          console.error("voice-transcribe fetch failed", e);
+          return json({ error: "AI xizmatiga ulanib bo'lmadi" }, 503);
+        }
+
         if (!res.ok) {
+          console.error("voice-transcribe gateway error", res.status, text.slice(0, 500));
+          const msg =
+            res.status === 402
+              ? "AI krediti tugagan"
+              : res.status === 429
+                ? "Juda ko'p so'rov — biroz kuting"
+                : "Transkripsiya xatoligi";
           return json(
-            { error: "Transkripsiya xatoligi", status: res.status, detail: text.slice(0, 500) },
-            res.status === 429 ? 429 : 502,
+            { error: msg, status: res.status, detail: text.slice(0, 300) },
+            res.status >= 400 && res.status < 500 ? res.status : 502,
           );
         }
+
         try {
           const data = JSON.parse(text);
           return json({ ok: true, text: String(data.text || "").trim() });
