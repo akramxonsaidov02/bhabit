@@ -2368,7 +2368,9 @@ function renderStats(){
     </div>
     <div class="streak-card gl"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b>🔥 Streak</b><span><b id="streakNum">${streak}</b> kun</span></div><div class="streak-row" id="streakRow"></div><div style="font-size:12px;color:var(--tx2);margin-top:10px">❄️ Streak Freeze: ${Number(S.streakFreezeLeft??2)} ta qoldi</div></div>
     <div class="cat-progress-card gl"><b>📈 Oxirgi 7 kun</b><div id="dayHistoryList" style="margin-top:10px"></div></div>
+    <div class="cat-progress-card gl" id="dayDetailCard" style="display:none"><b id="dayDetailTitle"></b><div id="dayDetailContent" style="margin-top:10px"></div></div>
     <div class="cat-progress-card gl" id="weatherCard" style="display:none"></div>`;
+
   renderStreak(); renderDayHistory(); renderWeatherCard&&renderWeatherCard();
 }
 async function fetchPrayers(force){
