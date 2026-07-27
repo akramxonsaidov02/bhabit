@@ -1,0 +1,52 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Kodni yuklash
+      uses: actions/checkout@v4
+
+    - name: Node.js ni sozlash
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Kutubxonalarni o'rnatish
+      run: npm install
+
+    - name: Capacitor ni o'rnatish
+      run: |
+        npm install @capacitor/core @capacitor/android
+        npm install -D @capacitor/cli
+
+    - name: Capacitor ni boshlash
+      run: npx cap init "Bhabit" "com.bhabit.app" --web-dir dist
+
+    - name: Saytni build qilish (Yig'ish)
+      run: npm run build
+
+    - name: Android platformasini qo'shish
+      run: npx cap add android
+
+    - name: Java (JDK) o'rnatish
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: APK faylini yaratish
+      working-directory: ./android
+      run: |
+        chmod +x ./gradlew
+        ./gradlew assembleDebug
+
+    - name: APK ni yuklab olish uchun tayyorlash
+      uses: actions/upload-artifact@v4
+      with:
+        name: Bhabit-App-APK
+        path: android/app/build/outputs/apk/debug/app-debug.apk
