@@ -19,16 +19,26 @@ jobs:
     - name: Kutubxonalarni o'rnatish
       run: npm install
 
-    - name: Capacitor ni o'rnatish
-      run: |
-        npm install @capacitor/core @capacitor/android
-        npm install -D @capacitor/cli
-
     - name: Saytni build qilish (Yig'ish)
       run: npm run build
 
-    - name: Capacitor sozlamalari va sinxronlash
+    - name: Build papkasini tekshirish va dist tayyorlash
       run: |
+        if [ -d "dist/client" ]; then
+          cp -r dist/client/* dist/ 2>/dev/null || true
+        elif [ -d "build" ]; then
+          mkdir -p dist && cp -r build/* dist/
+        elif [ -d ".output/public" ]; then
+          mkdir -p dist && cp -r .output/public/* dist/
+        elif [ ! -d "dist" ]; then
+          mkdir -p dist
+          cp index.html dist/ 2>/dev/null || true
+        fi
+
+    - name: Capacitor ni o'rnatish va sinxronlash
+      run: |
+        npm install @capacitor/core @capacitor/android
+        npm install -D @capacitor/cli
         npx cap init "Bhabit" "com.bhabit.app" --web-dir dist
         npx cap add android
         npx cap sync android
