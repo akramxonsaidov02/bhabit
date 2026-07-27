@@ -17,28 +17,37 @@ jobs:
         node-version: '20'
 
     - name: Kutubxonalarni o'rnatish
-      run: npm install
+      run: npm install --legacy-peer-deps
 
     - name: Saytni build qilish (Yig'ish)
-      run: npm run build
+      run: npm run build --if-present
 
-    - name: Build papkasini tekshirish va dist tayyorlash
+    - name: Build papkasini kafolatlangan holda dist ga tayyorlash
       run: |
-        if [ -d "dist/client" ]; then
-          cp -r dist/client/* dist/ 2>/dev/null || true
-        elif [ -d "build" ]; then
-          mkdir -p dist && cp -r build/* dist/
-        elif [ -d ".output/public" ]; then
-          mkdir -p dist && cp -r .output/public/* dist/
-        elif [ ! -d "dist" ]; then
-          mkdir -p dist
-          cp index.html dist/ 2>/dev/null || true
+        mkdir -p dist
+        if [ -f "build/index.html" ]; then
+          cp -r build/* dist/
+        elif [ -f "out/index.html" ]; then
+          cp -r out/* dist/
+        elif [ -f "public/index.html" ]; then
+          cp -r public/* dist/
+        elif [ -f ".output/public/index.html" ]; then
+          cp -r .output/public/* dist/
+        elif [ -f "www/index.html" ]; then
+          cp -r www/* dist/
+        elif [ -f "dist/client/index.html" ]; then
+          cp -r dist/client/* dist/
+        fi
+
+        if [ ! -f "dist/index.html" ]; then
+          cp -r ./* dist/ 2>/dev/null || true
         fi
 
     - name: Capacitor ni o'rnatish va sinxronlash
       run: |
         npm install @capacitor/core @capacitor/android
         npm install -D @capacitor/cli
+        rm -rf android capacitor.config.*
         npx cap init "Bhabit" "com.bhabit.app" --web-dir dist
         npx cap add android
         npx cap sync android
