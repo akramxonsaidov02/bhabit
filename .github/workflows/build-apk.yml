@@ -19,28 +19,13 @@ jobs:
     - name: Kutubxonalarni o'rnatish
       run: npm install --legacy-peer-deps
 
-    - name: Saytni build qilish (Yig'ish)
-      run: npm run build --if-present
-
-    - name: Build papkasini kafolatlangan holda dist ga tayyorlash
+    - name: Saytni build qilish (Vite)
       run: |
+        npx vite build || npm run build || true
         mkdir -p dist
-        if [ -f "build/index.html" ]; then
-          cp -r build/* dist/
-        elif [ -f "out/index.html" ]; then
-          cp -r out/* dist/
-        elif [ -f "public/index.html" ]; then
-          cp -r public/* dist/
-        elif [ -f ".output/public/index.html" ]; then
-          cp -r .output/public/* dist/
-        elif [ -f "www/index.html" ]; then
-          cp -r www/* dist/
-        elif [ -f "dist/client/index.html" ]; then
-          cp -r dist/client/* dist/
-        fi
-
         if [ ! -f "dist/index.html" ]; then
-          cp -r ./* dist/ 2>/dev/null || true
+          cp index.html dist/ 2>/dev/null || true
+          if [ -d "public" ]; then cp -r public/* dist/ 2>/dev/null || true; fi
         fi
 
     - name: Capacitor ni o'rnatish va sinxronlash
