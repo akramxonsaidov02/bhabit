@@ -24,14 +24,14 @@ jobs:
         npm install @capacitor/core @capacitor/android
         npm install -D @capacitor/cli
 
-    - name: Capacitor ni boshlash
-      run: npx cap init "Bhabit" "com.bhabit.app" --web-dir dist
-
     - name: Saytni build qilish (Yig'ish)
       run: npm run build
 
-    - name: Android platformasini qo'shish
-      run: npx cap add android
+    - name: Capacitor sozlamalari va sinxronlash
+      run: |
+        npx cap init "Bhabit" "com.bhabit.app" --web-dir dist
+        npx cap add android
+        npx cap sync android
 
     - name: Java (JDK) o'rnatish
       uses: actions/setup-java@v4
