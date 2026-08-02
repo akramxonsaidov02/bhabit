@@ -1522,7 +1522,7 @@ function taskIndexById(id){ return S.tasks.findIndex(x=>sameId(x.id,id)||sameId(
 function taskIdArg(id){ return JSON.stringify(String(id)); }
 
 function getFilteredTasks(){
-  let tasks=[...S.tasks];
+  let tasks=visibleTasks().slice();
   switch(curFilter){
     case 'time':     tasks.sort((a,b)=>t2m(a.start)-t2m(b.start)); break;
     case 'priority': tasks.sort((a,b)=>(PRIORITY[b.cat]||0)-(PRIORITY[a.cat]||0)); break;
@@ -1601,7 +1601,8 @@ function taskHtml(t,i){
 }
 
 function updateProgress(){
-  const tot=S.tasks.length, don=S.tasks.filter(t=>t.done).length;
+  const _vt=visibleTasks();
+  const tot=_vt.length, don=_vt.filter(t=>t.done).length;
   const pct=tot?Math.round(don/tot*100):0;
   const circ=157;
   document.getElementById('prFg').style.strokeDashoffset=circ-(circ*pct/100);
@@ -2506,7 +2507,8 @@ function goPage(page){
 
 function renderStats(){
   const el=document.getElementById('statsContent'); if(!el) return;
-  const tot=S.tasks.length, don=S.tasks.filter(t=>t.done).length, pct=tot?Math.round(don/tot*100):0;
+  const _vt2=(typeof visibleTasks==='function'?visibleTasks():S.tasks);
+  const tot=_vt2.length, don=_vt2.filter(t=>t.done).length, pct=tot?Math.round(don/tot*100):0;
   const streak=(window.KTExtras&&window.KTExtras.calcStreak?window.KTExtras.calcStreak():(S.streak||0));
   el.innerHTML=`
     <div class="stats-grid">
