@@ -1519,7 +1519,8 @@ function escAttr(s){ return esc(s).replace(/'/g,'&#39;'); }
 function sameId(a,b){ return String(a)===String(b); }
 function taskById(id){ return S.tasks.find(x=>sameId(x.id,id)||sameId(x.cloudId,id)); }
 function taskIndexById(id){ return S.tasks.findIndex(x=>sameId(x.id,id)||sameId(x.cloudId,id)); }
-function taskIdArg(id){ return JSON.stringify(String(id)); }
+// Atribut ichida ishlatiladi (atributlar " bilan o'ralgan) — shuning uchun ' bilan.
+function taskIdArg(id){ return "'"+String(id).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; }
 
 function getFilteredTasks(){
   let tasks=visibleTasks().slice();
