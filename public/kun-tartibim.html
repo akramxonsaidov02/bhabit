@@ -2610,7 +2610,8 @@ function initApp(){
       window.KTCloud.on('remoteChange', ()=>{
         try{ renderSchedule && renderSchedule(); renderPrayers && renderPrayers(); renderSettings && (document.getElementById('settingsOv')?.classList.contains('open')) && renderSettings(); }catch(e){}
       });
-      window.KTCloud.init(S).then(()=>{
+      window.KTCloud.init(S).then(async ()=>{
+        try{ await cleanCloudTasks(); }catch(e){ console.warn('cloud clean', e); }
         try{ renderSchedule && renderSchedule(); }catch(e){}
       }).catch(err=>console.warn('Cloud sync init failed:',err));
     }
