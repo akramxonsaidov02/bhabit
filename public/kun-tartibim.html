@@ -1814,7 +1814,7 @@ function saveTask(){
       }
     }
   } else {
-    const nt={id:Date.now(),name,done:false,autoChecked:false,deferred:false,
+    const nt={id:Date.now(),name,userAdded:true,done:false,autoChecked:false,deferred:false,
       start:newStart,end:newEnd,cat:newCat,note:newNote,autoDetectType:newDetect,priority:newCat==='work'?'orta':'past'};
     const conflicts=findConflicts(null,newStart,newEnd);
     if(conflicts.length>0 && (newCat==='work'||newCat==='medicine'||newCat==='prayer')){
