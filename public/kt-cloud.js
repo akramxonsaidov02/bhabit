@@ -475,6 +475,23 @@
     state.channels.push(ch);
   }
 
+  // ---- Cloud tozalash: dublikat va eski reja qatorlarini o'chirish ----
+  async function listTaskRows() {
+    if (!state.ready) return [];
+    const { data } = await state.sb
+      .from("tasks")
+      .select("id, name, start_time, end_time")
+      .eq("user_id", state.user.id)
+      .order("sort_order");
+    return data || [];
+  }
+
+  async function deleteTaskIds(ids) {
+    if (!state.ready || isViewer() || !ids || !ids.length) return;
+    markPending("tasks", 4000);
+    await state.sb.from("tasks").delete().in("id", ids);
+  }
+
   async function listDevices() {
     if (!state.ready) return [];
     const { data } = await state.sb
