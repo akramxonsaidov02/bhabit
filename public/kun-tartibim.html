@@ -1093,6 +1093,13 @@ function persist(){
 function hydrate(){
   try{ const r=localStorage.getItem('kt5'); if(r){const p=JSON.parse(r);S=Object.assign({},S,p); window.S=S;} }catch(e){}
   if(!S.tasks||!S.tasks.length) S.tasks=DEFTASKS.map(t=>({...t,done:false,autoChecked:false,deferred:false}));
+  // Yangi reja (ingliz tili) — bir marta ko'chiriladi
+  if(S.planVersion!==PLAN_VERSION){
+    const custom=(S.tasks||[]).filter(t=>t&&t.userAdded);
+    S.tasks=DEFTASKS.map(t=>({...t,done:false,autoChecked:false,deferred:false})).concat(custom);
+    S.planVersion=PLAN_VERSION;
+  }
+  S.tasks=dedupeTasks(S.tasks);
   S.tasks=S.tasks.map((t,i)=>({...t,order:t.order??i,autoDetectType:t.autoDetectType||'none'}));
   if(!S.activityLog) S.activityLog=[];
   if(!S.dayHistory) S.dayHistory={};
