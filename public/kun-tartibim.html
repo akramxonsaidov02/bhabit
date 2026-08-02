@@ -1140,6 +1140,36 @@ function dedupeTasks(list){
   return out;
 }
 
+// ── BULUTDAGI DUBLIKAT VA ESKI REJA QATORLARINI TOZALASH ──
+// Bulutda qolgan eski (grafik dizayn) va takrorlangan vazifalar mahalliy ro'yxatni
+// har sinxronlashda ifloslantirardi. Shu funksiya ularni bir marta o'chiradi.
+async function cleanCloudTasks(){
+  const C=window.KTCloud;
+  if(!C||!C.isReady||!C.isReady()||C.isViewer&&C.isViewer()) return;
+  if(!C.listTaskRows||!C.deleteTaskIds) return;
+  const rows=await C.listTaskRows();
+  if(!rows.length) return;
+  const sig=(n,s,e)=>String(n||'').trim().toLowerCase()+'|'+(s||'')+'|'+(e||'');
+  const keepSigs=new Set((S.tasks||[]).map(t=>sig(t.name,t.start,t.end)));
+  const fresh=S.cloudPlanVersion!==PLAN_VERSION;
+  const seen=new Set(); const del=[];
+  rows.forEach(r=>{
+    const k=sig(r.name,r.start_time,r.end_time);
+    if(seen.has(k)){ del.push(r.id); return; }   // dublikat
+    seen.add(k);
+    if(fresh && !keepSigs.has(k)) del.push(r.id); // eski rejadagi vazifa
+  });
+  if(del.length){
+    for(let i=0;i<del.length;i+=50) await C.deleteTaskIds(del.slice(i,i+50));
+  }
+  S.cloudPlanVersion=PLAN_VERSION;
+  S.tasks=dedupeTasks(S.tasks);
+  persist();
+  if(C.syncTasks) await C.syncTasks(S.tasks);
+  applyDayView(); renderSchedule();
+  if(del.length) toast('🧹 '+del.length+' ta takroriy/eski vazifa tozalandi');
+}
+
 // ── KUNLIK BELGILASHLAR (har bir kun alohida saqlanadi) ──
 function taskKey(t){ return String((t&&(t.cloudId||t.id))||''); }
 function activeDate(){ return S.selectedDate||todayKey(); }
@@ -1519,7 +1549,8 @@ function escAttr(s){ return esc(s).replace(/'/g,'&#39;'); }
 function sameId(a,b){ return String(a)===String(b); }
 function taskById(id){ return S.tasks.find(x=>sameId(x.id,id)||sameId(x.cloudId,id)); }
 function taskIndexById(id){ return S.tasks.findIndex(x=>sameId(x.id,id)||sameId(x.cloudId,id)); }
-function taskIdArg(id){ return JSON.stringify(String(id)); }
+// Atribut ichida ishlatiladi (atributlar " bilan o'ralgan) — shuning uchun ' bilan.
+function taskIdArg(id){ return "'"+String(id).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"; }
 
 function getFilteredTasks(){
   let tasks=visibleTasks().slice();
@@ -2609,7 +2640,8 @@ function initApp(){
       window.KTCloud.on('remoteChange', ()=>{
         try{ renderSchedule && renderSchedule(); renderPrayers && renderPrayers(); renderSettings && (document.getElementById('settingsOv')?.classList.contains('open')) && renderSettings(); }catch(e){}
       });
-      window.KTCloud.init(S).then(()=>{
+      window.KTCloud.init(S).then(async ()=>{
+        try{ await cleanCloudTasks(); }catch(e){ console.warn('cloud clean', e); }
         try{ renderSchedule && renderSchedule(); }catch(e){}
       }).catch(err=>console.warn('Cloud sync init failed:',err));
     }
