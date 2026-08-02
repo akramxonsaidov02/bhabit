@@ -406,8 +406,16 @@
           }
           return t;
         });
-        // Also keep any local-only tasks that haven't been synced yet (no cloudId).
-        prev.forEach((t) => { if (t && !t.cloudId) S.tasks.push(t); });
+        // Keep local-only tasks (no cloudId) — but skip ones the cloud already has
+        // (same name+start), otherwise every sync duplicates the whole list.
+        const sig = (t) => String(t.name || "").trim().toLowerCase() + "|" + (t.start || "") + "|" + (t.end || "");
+        const cloudSigs = new Set(S.tasks.map(sig));
+        prev.forEach((t) => {
+          if (!t || t.cloudId) return;
+          if (cloudSigs.has(sig(t))) return;
+          cloudSigs.add(sig(t));
+          S.tasks.push(t);
+        });
         void cloudById;
       } else if (cloud.tasks && hasPending("completions")) {
         // Only refresh `done` from cloud where no per-task pending exists.
