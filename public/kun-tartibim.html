@@ -1128,10 +1128,26 @@ function todayKey(){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
+// ── DUBLIKATLARNI TOZALASH ──
+function dedupeTasks(list){
+  const seen=new Set(), out=[];
+  (list||[]).forEach(t=>{
+    if(!t) return;
+    const k=String(t.name||'').trim().toLowerCase()+'|'+(t.start||'')+'|'+(t.end||'');
+    if(seen.has(k)) return;
+    seen.add(k); out.push(t);
+  });
+  return out;
+}
+
 // ── KUNLIK BELGILASHLAR (har bir kun alohida saqlanadi) ──
 function taskKey(t){ return String((t&&(t.cloudId||t.id))||''); }
 function activeDate(){ return S.selectedDate||todayKey(); }
 function isToday(){ return activeDate()===todayKey(); }
+// Vazifa shu kunga tegishlimi? (days bo'lmasa — har kuni)
+function dowOf(date){ const p=String(date||'').split('-'); return p.length===3 ? new Date(+p[0],+p[1]-1,+p[2]).getDay() : new Date().getDay(); }
+function taskOnDay(t,date){ return !t || !Array.isArray(t.days) || !t.days.length || t.days.indexOf(dowOf(date||activeDate()))>=0; }
+function visibleTasks(){ return (S.tasks||[]).filter(t=>taskOnDay(t,activeDate())); }
 function dayMap(date){
   if(!S.completions) S.completions={};
   if(!S.completions[date]) S.completions[date]={};
