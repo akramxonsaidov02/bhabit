@@ -90,8 +90,8 @@ export const Route = createFileRoute("/api/ai-plan")({
           );
         }
 
-        const apiKey = process.env.LOVABLE_API_KEY;
-        if (!apiKey) {
+        const apiKey = process.env.LOVABLE_API_KEY ?? "";
+        if (!apiKey && !process.env.GEMINI_API_KEY) {
           return new Response(
             JSON.stringify({ error: "AI xizmati sozlanmagan" }),
             { status: 500, headers: { "Content-Type": "application/json" } },
@@ -166,6 +166,7 @@ export const Route = createFileRoute("/api/ai-plan")({
               { role: "user", content: user },
             ],
             apiKey,
+            { heavy: true },
           );
           if (!r.ok) {
             return new Response(JSON.stringify({ error: "AI xatoligi", status: r.status }), {
@@ -224,6 +225,7 @@ export const Route = createFileRoute("/api/ai-plan")({
               { role: "user", content: text },
             ],
             apiKey,
+            { heavy: true },
           );
           if (!r.ok) {
             return new Response(JSON.stringify({ error: "AI xatoligi", status: r.status }), {
@@ -256,6 +258,44 @@ export const Route = createFileRoute("/api/ai-plan")({
               { role: "user", content: JSON.stringify(history).slice(0, 6000) },
             ],
             apiKey,
+            { heavy: true, json: false },
+          );
+          if (!r.ok) {
+            return new Response(JSON.stringify({ error: "AI xatoligi", status: r.status }), {
+              status: 502, headers: { "Content-Type": "application/json" },
+            });
+          }
+          return new Response(
+            JSON.stringify({ ok: true, content: r.content }),
+            { headers: { "Content-Type": "application/json" } },
+          );
+        }
+
+        if (mode === "coach") {
+          const question: string = String(payload.question || "").slice(0, 800).trim();
+          const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
+          const slim = tasks.slice(0, 60).map((t: any) => ({
+            name: t.name, cat: t.cat, start: t.start, end: t.end, done: !!t.done,
+          }));
+          const stats = payload.stats || {};
+          const history = payload.history || {};
+          const system = [
+            "Sen shaxsiy murabbiysan (coach). Foydalanuvchi Marg'ilon shahridan, namoz o'qiydi,",
+            "ingliz tilini o'rganyapti. Faqat o'zbek tilida javob ber.",
+            "Uslub: iliq, do'stona, motivatsion, hukm qilmaydigan. Markdown ishlat.",
+            "Javob strukturasi: 1-2 jumla umumiy baho, so'ng '•' bilan 3 ta aniq amaliy maslahat,",
+            "oxirida 1 ta qisqa rag'batlantiruvchi jumla. Maksimum 180 so'z.",
+            `Bugungi vazifalar: ${JSON.stringify(slim)}`,
+            `Statistika: ${JSON.stringify(stats)}`,
+            `Oxirgi kunlar tarixi: ${JSON.stringify(history).slice(0, 3000)}`,
+          ].join("\n");
+          const r = await callGateway(
+            [
+              { role: "system", content: system },
+              { role: "user", content: question || "Bugungi kunim haqida murabbiy sifatida fikr bildir va maslahat ber." },
+            ],
+            apiKey,
+            { heavy: true, json: false },
           );
           if (!r.ok) {
             return new Response(JSON.stringify({ error: "AI xatoligi", status: r.status }), {
