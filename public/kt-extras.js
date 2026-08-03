@@ -209,7 +209,8 @@
     try{
       window.toast && window.toast('🧠 Ovoz tahlil qilinmoqda…');
       const fd = new FormData();
-      fd.append('file', blob, 'voice.webm');
+      const ext = (blob.type||'').includes('mp4') ? 'mp4' : (blob.type||'').includes('ogg') ? 'ogg' : 'webm';
+      fd.append('file', blob, 'voice.'+ext);
       const tr = await fetch('/api/voice-transcribe', { method:'POST', headers:{'x-device-token':localStorage.getItem('bh_device_token')||''}, body:fd });
       const tj = await tr.json();
       if(!tr.ok || !tj.ok || !tj.text) throw new Error(tj.error||'Transkripsiya xatosi');
