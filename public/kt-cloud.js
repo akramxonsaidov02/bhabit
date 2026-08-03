@@ -542,12 +542,23 @@
         try {
           const fresh = await pullAll();
           applyCloudToLocal(S, fresh);
-          fire("remoteChange", { kind: lastKind, S });
+          fire("remoteChange", { kind: lastKind, S, cloud: fresh });
         } catch (e) {
           console.error("realtime pull failed", e);
         }
-      }, 350);
+      }, 900);
     });
+
+    // Tab qayta faollashganda ham bir marta tortib olamiz (uzilishdan keyin).
+    document.addEventListener("visibilitychange", async () => {
+      if (document.visibilityState !== "visible" || !state.ready) return;
+      try {
+        const fresh = await pullAll();
+        applyCloudToLocal(S, fresh);
+        fire("remoteChange", { kind: "visibility", S, cloud: fresh });
+      } catch (e) {}
+    });
+
 
 
     fire("ready", { user: state.user, deviceId: state.deviceId });
