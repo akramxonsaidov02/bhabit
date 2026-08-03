@@ -192,7 +192,8 @@
       rec.onstop = async ()=>{
         if(fab){ fab.classList.remove('rec'); fab.innerHTML='🎤'; }
         try{ stream && stream.getTracks().forEach(t=>t.stop()); }catch(e){}
-        const blob = new Blob(chunks, { type:'audio/webm' });
+        const mt = (rec && rec.mimeType) || 'audio/webm';
+        const blob = new Blob(chunks, { type: mt });
         await transcribeAndProcess(blob);
       };
       rec.start();
