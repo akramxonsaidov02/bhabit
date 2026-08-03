@@ -180,9 +180,14 @@
     }
     try{
       if(!navigator.mediaDevices || !window.MediaRecorder){ window.toast && window.toast('❌ Mikrofon qo\'llanmaydi'); return; }
-      stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      // Sifatliroq yozuv → aniqroq tanish
+      stream = await navigator.mediaDevices.getUserMedia({ audio:{
+        echoCancellation:true, noiseSuppression:true, autoGainControl:true,
+        channelCount:1, sampleRate:48000
+      } });
       chunks=[];
-      rec = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : undefined });
+      const pick = ['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(m=>window.MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(m));
+      rec = new MediaRecorder(stream, pick ? { mimeType: pick, audioBitsPerSecond: 128000 } : undefined);
       rec.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
       rec.onstop = async ()=>{
         if(fab){ fab.classList.remove('rec'); fab.innerHTML='🎤'; }
