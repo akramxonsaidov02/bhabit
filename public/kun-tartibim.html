@@ -375,9 +375,11 @@ body::before {
   backdrop-filter:var(--blur);
   box-shadow:var(--glass-sh);
   display:flex; align-items:stretch; overflow:hidden;
-  transition:all .25s cubic-bezier(.4,0,.2,1);
-  animation:slideUp .3s ease forwards;
+  transition:background .2s ease, opacity .2s ease;
   position:relative;
+}
+/* Faqat birinchi chizishda animatsiya — real-time yangilanishda sakramaydi */
+#schedList.first-paint .tc { animation:slideUp .3s ease forwards; }
 }
 .tc:hover { background:var(--glass-bg2); transform:translateX(2px); box-shadow:var(--glass-sh2); }
 .tc:hover .tc-actions { opacity:1; }
