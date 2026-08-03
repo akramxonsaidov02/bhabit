@@ -11,8 +11,48 @@ import { extractToken, findDeviceByToken } from "@/lib/gate.server";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
-async function callGateway(messages: unknown, apiKey: string) {
+type Msg = { role: string; content: string };
+
+// Og'ir (ko'p limit oladigan) rejimlar foydalanuvchining o'z Google AI Studio
+// kalitiga yo'naltiriladi; kalit bo'lmasa Lovable AI Gateway zaxira sifatida ishlaydi.
+async function callGemini(messages: Msg[], key: string, json: boolean) {
+  const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
+  const user = messages.filter((m) => m.role !== "system").map((m) => m.content).join("\n");
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: user }] }],
+        generationConfig: json ? { responseMimeType: "application/json" } : {},
+      }),
+    },
+  );
+  const text = await res.text();
+  if (!res.ok) return { ok: false as const, status: res.status, body: text };
+  let data: any = null;
+  try { data = JSON.parse(text); } catch { /* keep null */ }
+  const content =
+    (data?.candidates?.[0]?.content?.parts || []).map((p: any) => p?.text || "").join("") || "";
+  return { ok: true as const, content };
+}
+
+async function callGateway(
+  messages: unknown,
+  apiKey: string,
+  opts?: { json?: boolean; heavy?: boolean },
+) {
+  const json = opts?.json !== false;
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (opts?.heavy && geminiKey) {
+    const g = await callGemini(messages as Msg[], geminiKey, json).catch(() => null);
+    if (g && g.ok && g.content) return g;
+    console.warn("gemini failed, falling back to gateway");
+  }
   const res = await fetch(GATEWAY_URL, {
     method: "POST",
     headers: {
@@ -22,7 +62,7 @@ async function callGateway(messages: unknown, apiKey: string) {
     body: JSON.stringify({
       model: MODEL,
       messages,
-      response_format: { type: "json_object" },
+      ...(json ? { response_format: { type: "json_object" } } : {}),
     }),
   });
   const text = await res.text();
@@ -34,6 +74,7 @@ async function callGateway(messages: unknown, apiKey: string) {
   const content = data?.choices?.[0]?.message?.content ?? "";
   return { ok: true as const, content };
 }
+
 
 export const Route = createFileRoute("/api/ai-plan")({
   server: {
@@ -49,8 +90,8 @@ export const Route = createFileRoute("/api/ai-plan")({
           );
         }
 
-        const apiKey = process.env.LOVABLE_API_KEY;
-        if (!apiKey) {
+        const apiKey = process.env.LOVABLE_API_KEY ?? "";
+        if (!apiKey && !process.env.GEMINI_API_KEY) {
           return new Response(
             JSON.stringify({ error: "AI xizmati sozlanmagan" }),
             { status: 500, headers: { "Content-Type": "application/json" } },
@@ -125,6 +166,7 @@ export const Route = createFileRoute("/api/ai-plan")({
               { role: "user", content: user },
             ],
             apiKey,
+            { heavy: true },
           );
           if (!r.ok) {
             return new Response(JSON.stringify({ error: "AI xatoligi", status: r.status }), {
@@ -183,6 +225,7 @@ export const Route = createFileRoute("/api/ai-plan")({
               { role: "user", content: text },
             ],
             apiKey,
+            { heavy: true },
           );
           if (!r.ok) {
             return new Response(JSON.stringify({ error: "AI xatoligi", status: r.status }), {
@@ -215,6 +258,44 @@ export const Route = createFileRoute("/api/ai-plan")({
               { role: "user", content: JSON.stringify(history).slice(0, 6000) },
             ],
             apiKey,
+            { heavy: true, json: false },
+          );
+          if (!r.ok) {
+            return new Response(JSON.stringify({ error: "AI xatoligi", status: r.status }), {
+              status: 502, headers: { "Content-Type": "application/json" },
+            });
+          }
+          return new Response(
+            JSON.stringify({ ok: true, content: r.content }),
+            { headers: { "Content-Type": "application/json" } },
+          );
+        }
+
+        if (mode === "coach") {
+          const question: string = String(payload.question || "").slice(0, 800).trim();
+          const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
+          const slim = tasks.slice(0, 60).map((t: any) => ({
+            name: t.name, cat: t.cat, start: t.start, end: t.end, done: !!t.done,
+          }));
+          const stats = payload.stats || {};
+          const history = payload.history || {};
+          const system = [
+            "Sen shaxsiy murabbiysan (coach). Foydalanuvchi Marg'ilon shahridan, namoz o'qiydi,",
+            "ingliz tilini o'rganyapti. Faqat o'zbek tilida javob ber.",
+            "Uslub: iliq, do'stona, motivatsion, hukm qilmaydigan. Markdown ishlat.",
+            "Javob strukturasi: 1-2 jumla umumiy baho, so'ng '•' bilan 3 ta aniq amaliy maslahat,",
+            "oxirida 1 ta qisqa rag'batlantiruvchi jumla. Maksimum 180 so'z.",
+            `Bugungi vazifalar: ${JSON.stringify(slim)}`,
+            `Statistika: ${JSON.stringify(stats)}`,
+            `Oxirgi kunlar tarixi: ${JSON.stringify(history).slice(0, 3000)}`,
+          ].join("\n");
+          const r = await callGateway(
+            [
+              { role: "system", content: system },
+              { role: "user", content: question || "Bugungi kunim haqida murabbiy sifatida fikr bildir va maslahat ber." },
+            ],
+            apiKey,
+            { heavy: true, json: false },
           );
           if (!r.ok) {
             return new Response(JSON.stringify({ error: "AI xatoligi", status: r.status }), {

@@ -375,9 +375,11 @@ body::before {
   backdrop-filter:var(--blur);
   box-shadow:var(--glass-sh);
   display:flex; align-items:stretch; overflow:hidden;
-  transition:all .25s cubic-bezier(.4,0,.2,1);
-  animation:slideUp .3s ease forwards;
+  transition:background .2s ease, opacity .2s ease;
   position:relative;
+}
+/* Faqat birinchi chizishda animatsiya — real-time yangilanishda sakramaydi */
+#schedList.first-paint .tc { animation:slideUp .3s ease forwards; }
 }
 .tc:hover { background:var(--glass-bg2); transform:translateX(2px); box-shadow:var(--glass-sh2); }
 .tc:hover .tc-actions { opacity:1; }
@@ -1021,52 +1023,47 @@ const CATS = {
 // ═══════════════════════════════════════
 // days: [0=Yakshanba ... 6=Shanba]. Bo'sh bo'lsa — har kuni.
 // Ingliz tili darsi: Dushanba (1), Chorshanba (3), Juma (5) — soat 15:00.
-const PLAN_VERSION = 3;
+const PLAN_VERSION = 4;
 const LESSON_DAYS = [1,3,5];
 const FREE_DAYS   = [0,2,4,6];
 const DEFTASKS = [
-  {id:1,  name:"Uyg‘onish",                           start:"06:30",end:"06:35",cat:"morning",  note:"Telefonni darhol qo‘lga olma"},
-  {id:2,  name:"Yuz yuvish + gel",                    start:"06:35",end:"06:45",cat:"morning",  note:""},
-  {id:3,  name:"Tish yuvish",                         start:"06:45",end:"06:50",cat:"morning",  note:""},
-  {id:4,  name:"Kiyinish",                            start:"06:50",end:"07:00",cat:"morning",  note:""},
-  {id:5,  name:"Nonushta",                            start:"07:00",end:"07:20",cat:"food",     note:"Miyani ishga tushiradi"},
-  {id:6,  name:"English — 20 ta yangi so‘z yodlash",  start:"07:20",end:"07:50",cat:"work",     note:"Anki / daftar. Ertalab yod eng mustahkam"},
-  {id:7,  name:"Ko‘z dorisi + Dori №2 (1-marta)",     start:"07:50",end:"08:00",cat:"medicine", note:""},
-  {id:8,  name:"English — Grammatika darsligi",       start:"08:00",end:"09:00",cat:"work",     note:"Qoida + 10 ta mashq. Telegram yopiq"},
-  {id:9,  name:"Tanaffus — toza havo",                start:"09:00",end:"09:15",cat:"other",    note:"Ko‘zni dam oldirish"},
-  {id:10, name:"English — Listening (podkast/video)", start:"09:15",end:"10:15",cat:"work",     note:"Avval subtitrsiz, keyin subtitr bilan"},
-  {id:11, name:"Tanaffus",                            start:"10:15",end:"10:30",cat:"other",    note:""},
-  {id:12, name:"English — Speaking (shadowing)",      start:"10:30",end:"11:30",cat:"work",     note:"Ovozingni yozib, o‘zing eshit"},
-  {id:13, name:"English — Reading (oson hikoya)",     start:"11:30",end:"12:00",cat:"work",     note:"Notanish so‘zlarni yozib bor"},
-  {id:14, name:"Dori №2 — 2-marta",                   start:"12:00",end:"12:03",cat:"medicine", note:""},
-  {id:15, name:"Tahorat olish",                       start:"12:15",end:"12:30",cat:"prayer",   note:"Peshin uchun"},
-  {id:16, name:"Peshin namozi",                       start:"12:30",end:"12:55",cat:"prayer",   note:"O‘z vaqtida"},
-  {id:17, name:"Tush ovqati",                         start:"12:55",end:"13:30",cat:"food",     note:""},
-  {id:18, name:"Toza havo — yurish 1",                start:"13:30",end:"13:45",cat:"other",    note:"Ingliz podkast eshit"},
-  {id:19, name:"English — mustaqil mashq (test)",     start:"13:45",end:"14:45",cat:"work",     note:"Anki takror + grammatika testlari"},
-  {id:20, name:"Darsga tayyorgarlik + yo‘l",          start:"14:45",end:"15:00",cat:"work",     note:"Uy vazifasini tekshir", days:LESSON_DAYS},
-  {id:21, name:"🇬🇧 INGLIZ TILI DARSI (o‘qituvchi)",   start:"15:00",end:"17:00",cat:"work",     note:"Du · Ch · Ju — asosiy dars", days:LESSON_DAYS},
-  {id:22, name:"English — o‘tgan darsni takrorlash",  start:"15:00",end:"16:00",cat:"work",     note:"Dars yo‘q kun — konspektni qayta o‘qi", days:FREE_DAYS},
-  {id:23, name:"English — film/serial (subtitr b-n)", start:"16:00",end:"17:00",cat:"work",     note:"Dars yo‘q kun — jonli til", days:FREE_DAYS},
-  {id:24, name:"Dori №2 — 3-marta",                   start:"16:00",end:"16:03",cat:"medicine", note:""},
-  {id:25, name:"Tahorat olish",                       start:"17:00",end:"17:15",cat:"prayer",   note:"Asr uchun"},
-  {id:26, name:"Asr namozi",                          start:"17:15",end:"17:35",cat:"prayer",   note:"O‘z vaqtida"},
-  {id:27, name:"Sport — badantarbiya",                start:"17:35",end:"18:15",cat:"sport",    note:"Push-up, plank, squat, yugurish"},
-  {id:28, name:"Dush va kiyinish",                    start:"18:15",end:"18:30",cat:"other",    note:""},
-  {id:29, name:"Yurish 2 + ingliz podkast",           start:"18:30",end:"19:00",cat:"other",    note:"Quloq ko‘nikadi"},
-  {id:30, name:"Tahorat olish",                       start:"19:00",end:"19:15",cat:"prayer",   note:"Shom uchun"},
-  {id:31, name:"Shom namozi",                         start:"19:15",end:"19:35",cat:"prayer",   note:"O‘z vaqtida"},
-  {id:32, name:"Kechki ovqat",                        start:"19:35",end:"20:05",cat:"food",     note:""},
-  {id:33, name:"Dori №2 — 4-marta",                   start:"20:05",end:"20:08",cat:"medicine", note:""},
-  {id:34, name:"English — dars uy vazifasi",          start:"20:10",end:"21:00",cat:"work",     note:"Bugungi darsdan keyin", days:LESSON_DAYS},
-  {id:35, name:"English — Writing (5 ta jumla)",      start:"20:10",end:"21:00",cat:"work",     note:"Kun haqida inglizcha yoz", days:FREE_DAYS},
-  {id:36, name:"Tahorat olish",                       start:"21:00",end:"21:15",cat:"prayer",   note:"Xufton uchun"},
-  {id:37, name:"Xufton namozi",                       start:"21:15",end:"21:35",cat:"prayer",   note:"O‘z vaqtida"},
-  {id:38, name:"Ko‘z dorisi — kechasi",               start:"21:35",end:"21:40",cat:"medicine", note:""},
-  {id:39, name:"Yotishga tayyorgarlik",               start:"21:40",end:"22:00",cat:"night",    note:"Yuz geli, tish yuvish, telefon qo‘yish"},
-  {id:40, name:"Ertangi reja + 10 ta so‘z takrori",   start:"22:00",end:"22:20",cat:"night",    note:"Uxlashdan oldingi takror eng samarali"},
-  {id:41, name:"Uxlash",                              start:"22:30",end:"06:30",cat:"night",    note:"8 soat"},
+  {id:1,  name:"Uyg’onish",                                 start:"06:30",end:"06:35",cat:"morning",  note:"Telefonni darhol qo’lga olma"},
+  {id:2,  name:"Yuz yuvish + siliqlashtiruvchi gel",        start:"06:35",end:"06:45",cat:"morning",  note:"Maxsus sovun — 10 daqiqa"},
+  {id:3,  name:"Tish yuvish",                               start:"06:45",end:"06:50",cat:"morning",  note:"5 daqiqa"},
+  {id:4,  name:"Kiyinish",                                  start:"06:50",end:"07:05",cat:"morning",  note:""},
+  {id:5,  name:"Nonushta",                                  start:"07:05",end:"07:25",cat:"food",     note:"Muhim — miyani ishga tushiradi"},
+  {id:6,  name:"Ishga yo’l",                                start:"07:25",end:"07:45",cat:"morning",  note:"15–20 daqiqa"},
+  {id:7,  name:"Ertangi 3 ta maqsad yozish",                start:"07:45",end:"08:00",cat:"work",     note:"Faqat 3 ta muhim ish"},
+  {id:8,  name:"English — Yengil mashq / Duolingo",         start:"08:00",end:"08:30",cat:"work",     note:"Ilovada 15-20 daqiqa o'yinsimon mashq"},
+  {id:9,  name:"English — Grammatika (Pomodoro 25 daqiqa)", start:"08:30",end:"09:00",cat:"work",     note:"Faqat 1 ta qisqa dars yoki 1 dona mavzu"},
+  {id:10, name:"Tanaffus — qahva / toza havo",              start:"09:00",end:"09:30",cat:"other",    note:"Miyani to'liq dam oldirish"},
+  {id:11, name:"English — Qiziqarli YouTube video",         start:"09:30",end:"10:15",cat:"work",     note:"O'zingiz qiziqqan mavzuda (IT/texnologiya) video ko'rish"},
+  {id:12, name:"Erkin vaqt / Tanaffus",                     start:"10:15",end:"11:00",cat:"other",    note:"Charchamaslik uchun erkin vaqt"},
+  {id:13, name:"English — Yengil gapirish (15 daqiqa)",     start:"11:00",end:"11:30",cat:"work",     note:"Videodan 2-3 ta jumlani takrorlash yoki o'zingiz bilan gaplashish"},
+  {id:14, name:"Dam olish va tayyorgarlik",                 start:"11:30",end:"12:30",cat:"other",    note:"Namoz va tushlikdan oldingi bo'sh vaqt"},
+  {id:15, name:"Tahorat olish",                             start:"12:30",end:"12:45",cat:"prayer",   note:"Peshin uchun"},
+  {id:16, name:"Peshin namozi",                             start:"12:45",end:"13:10",cat:"prayer",   note:"O’z vaqtida o’qing"},
+  {id:17, name:"Tush ovqati",                               start:"13:10",end:"13:45",cat:"food",     note:"Telefonni qo’yib dam oling"},
+  {id:18, name:"Toza havo — yurish",                        start:"13:45",end:"14:15",cat:"other",    note:"Yoqimli musiqa yoki inglizcha yengil podkast eshitish"},
+  {id:19, name:"Darsga tayyorgarlik + yo‘l",                start:"14:15",end:"15:00",cat:"work",     note:"Shoshmasdan tayyorlanish"},
+  {id:20, name:"🇬🇧 INGLIZ TILI DARSI (o‘qituvchi)",         start:"15:00",end:"17:00",cat:"work",     note:"Du · Ch · Ju — asosiy dars / Dars yo'q kun: kinolar ko'rish"},
+  {id:21, name:"Tahorat olish",                             start:"17:15",end:"17:30",cat:"prayer",   note:"Asr uchun"},
+  {id:22, name:"Asr namozi",                                start:"17:30",end:"17:50",cat:"prayer",   note:"O’z vaqtida o’qing"},
+  {id:23, name:"Sport — badantarbiya",                      start:"17:50",end:"18:30",cat:"sport",    note:"Push-up, plank, squat, yugurish"},
+  {id:24, name:"Dush va kiyinish",                          start:"18:30",end:"18:45",cat:"other",    note:""},
+  {id:25, name:"Toza havo — yurish 2",                      start:"18:45",end:"19:15",cat:"other",    note:"30 daqiqa tetiklashish"},
+  {id:26, name:"Tahorat olish",                             start:"19:15",end:"19:30",cat:"prayer",   note:"Shom uchun"},
+  {id:27, name:"Shom namozi",                               start:"19:30",end:"19:50",cat:"prayer",   note:"O’z vaqtida o’qing"},
+  {id:28, name:"Kechki ovqat",                              start:"19:50",end:"20:30",cat:"food",     note:""},
+  {id:29, name:"English — Yengil uy vazifasi (20 daqiqa)",  start:"20:30",end:"21:00",cat:"work",     note:"Darsdagi vazifaning faqat muhim qismini ko'rish"},
+  {id:30, name:"English — Mini-kundalik (3-5 ta jumla)",    start:"21:00",end:"21:20",cat:"work",     note:"Bugungi kun haqida inglizcha sodda 3 ta gap yozish"},
+  {id:31, name:"Tahorat olish",                             start:"21:30",end:"21:45",cat:"prayer",   note:"Xufton uchun"},
+  {id:32, name:"Xufton namozi",                             start:"21:45",end:"22:05",cat:"prayer",   note:"O’z vaqtida o’qing"},
+  {id:33, name:"Yotishga tayyorgarlik",                     start:"22:05",end:"22:20",cat:"night",    note:"Yuz geli, tish yuvish, telefon qo’yish"},
+  {id:34, name:"Ertangi reja + dam olish",                  start:"22:20",end:"22:30",cat:"night",    note:"Ertangi kunni ko'zdan kechirish"},
+  {id:35, name:"Uxlash",                                    start:"22:30",end:"06:30",cat:"night",    note:"8 soat — sifatli uyqu"},
 ];
+
 const DEFP = {fajr:"04:33",dhuhr:"13:07",asr:"17:23",maghrib:"20:21",isha:"21:38"};
 
 // ═══════════════════════════════════════
@@ -1565,14 +1562,25 @@ function getFilteredTasks(){
   return tasks;
 }
 
+// DOM ni faqat haqiqiy o'zgarish bo'lganda yangilaymiz — aks holda ro'yxat
+// har sinxronlashda qayta chiziladi va vazifani bosish qiyinlashadi.
+let _lastSchedHtml=null, _schedPainted=false;
+function paintSched(html){
+  const el=document.getElementById('schedList'); if(!el) return;
+  const out=html||'<div style="text-align:center;padding:32px;color:var(--tx3);font-size:13px">Vazifalar topilmadi</div>';
+  if(out===_lastSchedHtml) return;          // hech nima o'zgarmagan → tegmaymiz
+  _lastSchedHtml=out;
+  if(!_schedPainted){ el.classList.add('first-paint'); }
+  el.innerHTML=out;
+  if(!_schedPainted){ _schedPainted=true; setTimeout(()=>el.classList.remove('first-paint'),700); }
+}
 function renderSchedule(){
   updateProgress();
   const tasks=getFilteredTasks();
 
   if(curFilter==='time'||curFilter==='priority'||curFilter==='remaining'){
     // flat list, no sections
-    let html=tasks.map((t,i)=>taskHtml(t,i)).join('');
-    document.getElementById('schedList').innerHTML=html||'<div style="text-align:center;padding:32px;color:var(--tx3);font-size:13px">Vazifalar topilmadi</div>';
+    paintSched(tasks.map((t,i)=>taskHtml(t,i)).join(''));
     return;
   }
 
@@ -1584,8 +1592,7 @@ function renderSchedule(){
   // if specific cat filter
   if(CATS[curFilter]){
     const ts=grps[curFilter]||[];
-    if(!ts.length){html='<div style="text-align:center;padding:32px;color:var(--tx3);font-size:13px">Vazifalar topilmadi</div>';}
-    else{ ts.forEach((t,i)=>html+=taskHtml(t,i)); }
+    if(ts.length) ts.forEach((t,i)=>html+=taskHtml(t,i));
   } else {
     order.forEach(cat=>{
       if(!grps[cat])return;
@@ -1594,8 +1601,9 @@ function renderSchedule(){
       grps[cat].forEach((t,i)=>html+=taskHtml(t,i));
     });
   }
-  document.getElementById('schedList').innerHTML=html||'<div style="text-align:center;padding:32px;color:var(--tx3);font-size:13px">Vazifalar topilmadi</div>';
+  paintSched(html);
 }
+
 
 function taskHtml(t,i){
   const dc=t.done?'done':'';
@@ -2637,8 +2645,23 @@ function initApp(){
     initAutoLock();
     // Cloud sync: anonymous auth, device register, realtime sync
     if(window.KTCloud){
-      window.KTCloud.on('remoteChange', ()=>{
-        try{ renderSchedule && renderSchedule(); renderPrayers && renderPrayers(); renderSettings && (document.getElementById('settingsOv')?.classList.contains('open')) && renderSettings(); }catch(e){}
+      window.KTCloud.on('remoteChange', (ev)=>{
+        try{
+          // Bulutdagi belgilashlarni joriy kun xaritasiga ko'chiramiz
+          const date=activeDate();
+          if(ev && ev.cloud && Array.isArray(ev.cloud.tasks) && date===todayKey()){
+            const map=dayMap(date);
+            ev.cloud.tasks.forEach(t=>{ const k=String(t.cloudId||t.id||''); if(!k) return; if(t.done) map[k]=true; else delete map[k]; });
+          }
+          applyDayView();
+          applyTheme && applyTheme(); applyAccent && applyAccent();
+          if(S.font) document.body.style.fontFamily=S.font;
+          renderSchedule && renderSchedule();
+          renderPrayers && renderPrayers();
+          updateTopbar && updateTopbar();
+          renderStreak && renderStreak();
+          if(document.getElementById('settingsOv')?.classList.contains('open')) renderSettings && renderSettings();
+        }catch(e){}
       });
       window.KTCloud.init(S).then(async ()=>{
         try{ await cleanCloudTasks(); }catch(e){ console.warn('cloud clean', e); }

@@ -180,14 +180,20 @@
     }
     try{
       if(!navigator.mediaDevices || !window.MediaRecorder){ window.toast && window.toast('❌ Mikrofon qo\'llanmaydi'); return; }
-      stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      // Sifatliroq yozuv → aniqroq tanish
+      stream = await navigator.mediaDevices.getUserMedia({ audio:{
+        echoCancellation:true, noiseSuppression:true, autoGainControl:true,
+        channelCount:1, sampleRate:48000
+      } });
       chunks=[];
-      rec = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : undefined });
+      const pick = ['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(m=>window.MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(m));
+      rec = new MediaRecorder(stream, pick ? { mimeType: pick, audioBitsPerSecond: 128000 } : undefined);
       rec.ondataavailable = e=>{ if(e.data && e.data.size) chunks.push(e.data); };
       rec.onstop = async ()=>{
         if(fab){ fab.classList.remove('rec'); fab.innerHTML='🎤'; }
         try{ stream && stream.getTracks().forEach(t=>t.stop()); }catch(e){}
-        const blob = new Blob(chunks, { type:'audio/webm' });
+        const mt = (rec && rec.mimeType) || 'audio/webm';
+        const blob = new Blob(chunks, { type: mt });
         await transcribeAndProcess(blob);
       };
       rec.start();
@@ -203,7 +209,8 @@
     try{
       window.toast && window.toast('🧠 Ovoz tahlil qilinmoqda…');
       const fd = new FormData();
-      fd.append('file', blob, 'voice.webm');
+      const ext = (blob.type||'').includes('mp4') ? 'mp4' : (blob.type||'').includes('ogg') ? 'ogg' : 'webm';
+      fd.append('file', blob, 'voice.'+ext);
       const tr = await fetch('/api/voice-transcribe', { method:'POST', headers:{'x-device-token':localStorage.getItem('bh_device_token')||''}, body:fd });
       const tj = await tr.json();
       if(!tr.ok || !tj.ok || !tj.text) throw new Error(tj.error||'Transkripsiya xatosi');
@@ -418,7 +425,64 @@
     window.toast && window.toast('✅ '+TEMPLATES[key].length+' vazifa qo\'shildi');
   }
 
+  // ---------- 🤖 MURABBIY (AI COACH) ----------
+  async function openCoach(question){
+    const S = window.S; if(!S) return;
+    let modal = document.getElementById('ktCoachOv');
+    if(modal) modal.remove();
+    modal = document.createElement('div');
+    modal.id = 'ktCoachOv';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+    modal.innerHTML=`<div style="background:var(--bg,#0f172a);border:1px solid var(--bdr,#334155);border-radius:16px;max-width:520px;width:100%;max-height:82vh;overflow-y:auto;padding:22px;color:var(--tx,#fff)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0;font-size:18px">🤖 Murabbiy</h3>
+        <button onclick="document.getElementById('ktCoachOv').remove()" style="background:none;border:none;color:var(--tx);font-size:24px;cursor:pointer">✕</button>
+      </div>
+      <div id="ktCoachBody" style="line-height:1.7;font-size:14px">
+        <div style="text-align:center;padding:34px"><div style="display:inline-block;width:20px;height:20px;border:2px solid var(--accent,#22c55e);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite"></div><div style="margin-top:12px;color:var(--tx2)">Murabbiy o'ylamoqda…</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <input id="ktCoachQ" placeholder="Savolingiz… (masalan: ingliz tilini qanday tezlashtiray?)" style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--bdr,#334155);background:var(--bg2,#111827);color:var(--tx,#fff);font-family:inherit;font-size:13px">
+        <button id="ktCoachSend" style="padding:10px 14px;border-radius:10px;border:none;background:var(--accent,#22c55e);color:#04120a;font-weight:700;cursor:pointer">Yubor</button>
+      </div>
+    </div>`;
+    document.body.appendChild(modal);
+    const send = document.getElementById('ktCoachSend');
+    const inp = document.getElementById('ktCoachQ');
+    const ask = ()=>{ const q=(inp.value||'').trim(); if(!q) return; inp.value=''; runCoach(q); };
+    if(send) send.onclick = ask;
+    if(inp) inp.addEventListener('keydown', e=>{ if(e.key==='Enter') ask(); });
+    runCoach(question||'');
+  }
+
+  async function runCoach(question){
+    const S = window.S || {};
+    const body = document.getElementById('ktCoachBody');
+    if(body) body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--tx2)">Murabbiy o\'ylamoqda…</div>';
+    const tasks = (S.tasks||[]).map(t=>({name:t.name,cat:t.cat,start:t.start,end:t.end,done:!!t.done}));
+    const done = tasks.filter(t=>t.done).length;
+    const stats = { jami:tasks.length, bajarilgan:done, foiz: tasks.length?Math.round(done/tasks.length*100):0, streak: (typeof calcStreak==='function'?calcStreak():0) };
+    try{
+      const r = await fetch('/api/ai-plan', {
+        method:'POST', headers:{'Content-Type':'application/json','x-device-token':localStorage.getItem('bh_device_token')||''},
+        body: JSON.stringify({ mode:'coach', question, tasks, stats, history: S.dayHistory||{} })
+      });
+      const j = await r.json();
+      const el = document.getElementById('ktCoachBody'); if(!el) return;
+      if(!r.ok || !j.ok){ el.innerHTML = '<div style="color:#ef4444">❌ '+(j.error||'AI xatoligi')+'</div>'; return; }
+      el.innerHTML = String(j.content||'')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/\*\*(.*?)\*\*/g,'<b>$1</b>')
+        .replace(/\n/g,'<br>');
+    }catch(e){
+      const el = document.getElementById('ktCoachBody');
+      if(el) el.innerHTML = '<div style="color:#ef4444">❌ '+(e.message||'Xatolik')+'</div>';
+    }
+  }
+  window.openCoach = openCoach;
+
   // ---------- AI HAFTALIK HISOBOT ----------
+
   async function showReport(){
     const S = window.S; if(!S) return;
     const modal = document.createElement('div');

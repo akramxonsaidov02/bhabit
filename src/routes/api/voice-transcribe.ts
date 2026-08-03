@@ -68,6 +68,53 @@ export const Route = createFileRoute("/api/voice-transcribe")({
           return { r, body: await r.text() };
         }
 
+        // 1) Google AI Studio (Gemini) — o'zbek tilini ancha yaxshi taniydi.
+        const geminiKey = process.env.GEMINI_API_KEY;
+        if (geminiKey) {
+          try {
+            const buf = new Uint8Array(await (file as Blob).arrayBuffer());
+            let bin = "";
+            for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]!);
+            const b64 = btoa(bin);
+            const gr = await fetch(
+              "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "x-goog-api-key": geminiKey },
+                body: JSON.stringify({
+                  systemInstruction: {
+                    parts: [{
+                      text:
+                        "Sen o'zbek tilidagi nutqni matnga aylantiruvchisan. Audio o'zbek tilida (Farg'ona shevasi bo'lishi mumkin). " +
+                        "Faqat eshitilgan matnni o'zbek lotin alifbosida qaytar. Hech qanday izoh, tirnoq yoki markdown yozma. " +
+                        "Vaqtlar aytilsa raqam bilan yoz (masalan 'soat 9 da').",
+                    }],
+                  },
+                  contents: [{
+                    role: "user",
+                    parts: [
+                      { inline_data: { mime_type: type || "audio/webm", data: b64 } },
+                      { text: "Ushbu audiodagi gapni o'zbekcha matn qilib yoz." },
+                    ],
+                  }],
+                  generationConfig: { temperature: 0 },
+                }),
+              },
+            );
+            const gt = await gr.text();
+            if (gr.ok) {
+              const gd = JSON.parse(gt);
+              const out = (gd?.candidates?.[0]?.content?.parts || [])
+                .map((p: any) => p?.text || "").join("").trim();
+              if (out) return json({ ok: true, text: out, via: "gemini" });
+            } else {
+              console.warn("gemini stt failed", gr.status, gt.slice(0, 300));
+            }
+          } catch (e) {
+            console.warn("gemini stt error", e);
+          }
+        }
+
         let res: Response;
         let text: string;
         try {
