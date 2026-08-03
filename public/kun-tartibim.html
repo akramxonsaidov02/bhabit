@@ -1562,14 +1562,25 @@ function getFilteredTasks(){
   return tasks;
 }
 
+// DOM ni faqat haqiqiy o'zgarish bo'lganda yangilaymiz — aks holda ro'yxat
+// har sinxronlashda qayta chiziladi va vazifani bosish qiyinlashadi.
+let _lastSchedHtml=null, _schedPainted=false;
+function paintSched(html){
+  const el=document.getElementById('schedList'); if(!el) return;
+  const out=html||'<div style="text-align:center;padding:32px;color:var(--tx3);font-size:13px">Vazifalar topilmadi</div>';
+  if(out===_lastSchedHtml) return;          // hech nima o'zgarmagan → tegmaymiz
+  _lastSchedHtml=out;
+  if(!_schedPainted){ el.classList.add('first-paint'); }
+  el.innerHTML=out;
+  if(!_schedPainted){ _schedPainted=true; setTimeout(()=>el.classList.remove('first-paint'),700); }
+}
 function renderSchedule(){
   updateProgress();
   const tasks=getFilteredTasks();
 
   if(curFilter==='time'||curFilter==='priority'||curFilter==='remaining'){
     // flat list, no sections
-    let html=tasks.map((t,i)=>taskHtml(t,i)).join('');
-    document.getElementById('schedList').innerHTML=html||'<div style="text-align:center;padding:32px;color:var(--tx3);font-size:13px">Vazifalar topilmadi</div>';
+    paintSched(tasks.map((t,i)=>taskHtml(t,i)).join(''));
     return;
   }
 
@@ -1581,8 +1592,7 @@ function renderSchedule(){
   // if specific cat filter
   if(CATS[curFilter]){
     const ts=grps[curFilter]||[];
-    if(!ts.length){html='<div style="text-align:center;padding:32px;color:var(--tx3);font-size:13px">Vazifalar topilmadi</div>';}
-    else{ ts.forEach((t,i)=>html+=taskHtml(t,i)); }
+    if(ts.length) ts.forEach((t,i)=>html+=taskHtml(t,i));
   } else {
     order.forEach(cat=>{
       if(!grps[cat])return;
@@ -1591,8 +1601,9 @@ function renderSchedule(){
       grps[cat].forEach((t,i)=>html+=taskHtml(t,i));
     });
   }
-  document.getElementById('schedList').innerHTML=html||'<div style="text-align:center;padding:32px;color:var(--tx3);font-size:13px">Vazifalar topilmadi</div>';
+  paintSched(html);
 }
+
 
 function taskHtml(t,i){
   const dc=t.done?'done':'';
