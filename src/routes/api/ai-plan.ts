@@ -11,8 +11,48 @@ import { extractToken, findDeviceByToken } from "@/lib/gate.server";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-2.5-flash";
 
-async function callGateway(messages: unknown, apiKey: string) {
+type Msg = { role: string; content: string };
+
+// Og'ir (ko'p limit oladigan) rejimlar foydalanuvchining o'z Google AI Studio
+// kalitiga yo'naltiriladi; kalit bo'lmasa Lovable AI Gateway zaxira sifatida ishlaydi.
+async function callGemini(messages: Msg[], key: string, json: boolean) {
+  const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
+  const user = messages.filter((m) => m.role !== "system").map((m) => m.content).join("\n");
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: user }] }],
+        generationConfig: json ? { responseMimeType: "application/json" } : {},
+      }),
+    },
+  );
+  const text = await res.text();
+  if (!res.ok) return { ok: false as const, status: res.status, body: text };
+  let data: any = null;
+  try { data = JSON.parse(text); } catch { /* keep null */ }
+  const content =
+    (data?.candidates?.[0]?.content?.parts || []).map((p: any) => p?.text || "").join("") || "";
+  return { ok: true as const, content };
+}
+
+async function callGateway(
+  messages: unknown,
+  apiKey: string,
+  opts?: { json?: boolean; heavy?: boolean },
+) {
+  const json = opts?.json !== false;
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (opts?.heavy && geminiKey) {
+    const g = await callGemini(messages as Msg[], geminiKey, json).catch(() => null);
+    if (g && g.ok && g.content) return g;
+    console.warn("gemini failed, falling back to gateway");
+  }
   const res = await fetch(GATEWAY_URL, {
     method: "POST",
     headers: {
@@ -22,7 +62,7 @@ async function callGateway(messages: unknown, apiKey: string) {
     body: JSON.stringify({
       model: MODEL,
       messages,
-      response_format: { type: "json_object" },
+      ...(json ? { response_format: { type: "json_object" } } : {}),
     }),
   });
   const text = await res.text();
@@ -34,6 +74,7 @@ async function callGateway(messages: unknown, apiKey: string) {
   const content = data?.choices?.[0]?.message?.content ?? "";
   return { ok: true as const, content };
 }
+
 
 export const Route = createFileRoute("/api/ai-plan")({
   server: {
