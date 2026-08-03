@@ -2645,8 +2645,23 @@ function initApp(){
     initAutoLock();
     // Cloud sync: anonymous auth, device register, realtime sync
     if(window.KTCloud){
-      window.KTCloud.on('remoteChange', ()=>{
-        try{ renderSchedule && renderSchedule(); renderPrayers && renderPrayers(); renderSettings && (document.getElementById('settingsOv')?.classList.contains('open')) && renderSettings(); }catch(e){}
+      window.KTCloud.on('remoteChange', (ev)=>{
+        try{
+          // Bulutdagi belgilashlarni joriy kun xaritasiga ko'chiramiz
+          const date=activeDate();
+          if(ev && ev.cloud && Array.isArray(ev.cloud.tasks) && date===todayKey()){
+            const map=dayMap(date);
+            ev.cloud.tasks.forEach(t=>{ const k=String(t.cloudId||t.id||''); if(!k) return; if(t.done) map[k]=true; else delete map[k]; });
+          }
+          applyDayView();
+          applyTheme && applyTheme(); applyAccent && applyAccent();
+          if(S.font) document.body.style.fontFamily=S.font;
+          renderSchedule && renderSchedule();
+          renderPrayers && renderPrayers();
+          updateTopbar && updateTopbar();
+          renderStreak && renderStreak();
+          if(document.getElementById('settingsOv')?.classList.contains('open')) renderSettings && renderSettings();
+        }catch(e){}
       });
       window.KTCloud.init(S).then(async ()=>{
         try{ await cleanCloudTasks(); }catch(e){ console.warn('cloud clean', e); }
