@@ -380,7 +380,11 @@ body::before {
 }
 /* Faqat birinchi chizishda animatsiya — real-time yangilanishda sakramaydi */
 #schedList.first-paint .tc { animation:slideUp .3s ease forwards; }
-}
+/* Vazifa belgilanganda — faqat shu karta uchun */
+@keyframes tcPop { 0%{transform:scale(1)} 40%{transform:scale(1.02)} 100%{transform:scale(1)} }
+.tc.tc-pop { animation:tcPop .4s cubic-bezier(.34,1.56,.64,1); }
+.st-btn{padding:7px 12px;border-radius:10px;border:1px solid var(--bdr2);background:var(--glass-bg2);color:var(--tx);font-size:12px;font-weight:600;cursor:pointer}
+
 .tc:hover { background:var(--glass-bg2); transform:translateX(2px); box-shadow:var(--glass-sh2); }
 .tc:hover .tc-actions { opacity:1; }
 .tc.done { opacity:.5; }
