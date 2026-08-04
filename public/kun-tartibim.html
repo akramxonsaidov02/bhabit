@@ -1588,18 +1588,29 @@ function getFilteredTasks(){
   return tasks;
 }
 
-// DOM ni faqat haqiqiy o'zgarish bo'lganda yangilaymiz — aks holda ro'yxat
-// har sinxronlashda qayta chiziladi va vazifani bosish qiyinlashadi.
+// DOM ni faqat haqiqiy o'zgargan kartalar uchun yangilaymiz. Butun ro'yxatni
+// qayta chizish har sinxronlashda animatsiya/sakrashga sabab bo'lardi.
 let _lastSchedHtml=null, _schedPainted=false;
 function paintSched(html){
   const el=document.getElementById('schedList'); if(!el) return;
   const out=html||'<div style="text-align:center;padding:32px;color:var(--tx3);font-size:13px">Vazifalar topilmadi</div>';
   if(out===_lastSchedHtml) return;          // hech nima o'zgarmagan → tegmaymiz
   _lastSchedHtml=out;
+  const tmp=document.createElement('div'); tmp.innerHTML=out;
+  const news=Array.from(tmp.children), olds=Array.from(el.children);
+  const key=n=>(n.id||'')+'#'+(n.className||'').replace(/\bdone\b|\bdeferred\b/g,'').trim();
+  const sameShape = _schedPainted && news.length===olds.length &&
+    news.every((n,i)=>key(n)===key(olds[i]));
+  if(sameShape){
+    // Faqat o'zgargan kartani almashtiramiz — animatsiya qayta ishga tushmaydi.
+    news.forEach((n,i)=>{ if(n.outerHTML!==olds[i].outerHTML) olds[i].replaceWith(n); });
+    return;
+  }
   if(!_schedPainted){ el.classList.add('first-paint'); }
   el.innerHTML=out;
   if(!_schedPainted){ _schedPainted=true; setTimeout(()=>el.classList.remove('first-paint'),700); }
 }
+
 function renderSchedule(){
   updateProgress();
   const tasks=getFilteredTasks();
