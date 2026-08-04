@@ -1321,7 +1321,7 @@ function pinSetupKey(k){
   }
 }
 function pinSetupDel(){ if(pinSetupInput.length>0){pinSetupInput=pinSetupInput.slice(0,-1); updatePinDots('pinSetupDots',pinSetupInput);} }
-function pinSetupSkip(){ S.pinCode='0000'; S.pinSetupDone=true; persist(); toast('Standart PIN: 0000'); enterApp(); }
+function pinSetupSkip(){ S.pinCode='0000'; S.pinSetupDone=true; persist(); try{ localStorage.setItem('kt5_pin',JSON.stringify({done:true,code:'0000'})); }catch(e){} toast('Standart PIN: 0000'); enterApp(); }
 
 function pinLockKey(k){
   if(pinLockInput.length>=4) return;
