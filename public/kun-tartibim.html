@@ -1649,7 +1649,7 @@ function renderSchedule(){
 function taskHtml(t,i){
   const dc=t.done?'done':'';
   const defc=t.deferred?'deferred':'';
-  const delayAnim=`animation-delay:${i*30}ms`;
+  const delayAnim=_schedPainted?'':`animation-delay:${i*30}ms`;
   const timeStr=t.start+(t.end&&t.end!==t.start?' – '+t.end:'');
   const tags=[];
   if(t.autoChecked) tags.push('<span class="tc-tag tag-auto">Avto</span>');
