@@ -622,6 +622,8 @@
     removeDevice,
     listTaskRows,
     deleteTaskIds,
+    wipeTasks,
+
     isViewer,
     getUser: () => state.user,
     getDeviceId: () => state.deviceId,
