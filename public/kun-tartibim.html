@@ -1359,6 +1359,8 @@ async function checkSecret(){
     if(res.ok&&data.ok){
       errEl.textContent='';
       S.pinSetupDone=false; persist();
+      try{ localStorage.removeItem('kt5_pin'); }catch(e){}
+
       showPinSetup();
       document.getElementById('lockSub').textContent='Yangi PIN kod o\u2019rnating';
     } else {
