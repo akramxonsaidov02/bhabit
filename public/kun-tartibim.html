@@ -380,7 +380,11 @@ body::before {
 }
 /* Faqat birinchi chizishda animatsiya — real-time yangilanishda sakramaydi */
 #schedList.first-paint .tc { animation:slideUp .3s ease forwards; }
-}
+/* Vazifa belgilanganda — faqat shu karta uchun */
+@keyframes tcPop { 0%{transform:scale(1)} 40%{transform:scale(1.02)} 100%{transform:scale(1)} }
+.tc.tc-pop { animation:tcPop .4s cubic-bezier(.34,1.56,.64,1); }
+.st-btn{padding:7px 12px;border-radius:10px;border:1px solid var(--bdr2);background:var(--glass-bg2);color:var(--tx);font-size:12px;font-weight:600;cursor:pointer}
+
 .tc:hover { background:var(--glass-bg2); transform:translateX(2px); box-shadow:var(--glass-sh2); }
 .tc:hover .tc-actions { opacity:1; }
 .tc.done { opacity:.5; }
@@ -1145,20 +1149,27 @@ async function cleanCloudTasks(){
   if(!C||!C.isReady||!C.isReady()||C.isViewer&&C.isViewer()) return;
   if(!C.listTaskRows||!C.deleteTaskIds) return;
   const rows=await C.listTaskRows();
-  if(!rows.length) return;
-  const sig=(n,s,e)=>String(n||'').trim().toLowerCase()+'|'+(s||'')+'|'+(e||'');
-  const keepSigs=new Set((S.tasks||[]).map(t=>sig(t.name,t.start,t.end)));
+  // Dublikat aniqlash faqat nom+boshlanish vaqti bo'yicha (tugash vaqti mos
+  // kelmagani uchun eski nusxalar qayta-qayta paydo bo'lardi).
+  const sig=(n,s)=>String(n||'').trim().toLowerCase()+'|'+String(s||'').slice(0,5);
+  const keepSigs=new Set((S.tasks||[]).map(t=>sig(t.name,t.start)));
   const fresh=S.cloudPlanVersion!==PLAN_VERSION;
-  const seen=new Set(); const del=[];
+  const keptById=new Map(); const seen=new Map(); const del=[];
   rows.forEach(r=>{
-    const k=sig(r.name,r.start_time,r.end_time);
+    const k=sig(r.name,r.start_time);
     if(seen.has(k)){ del.push(r.id); return; }   // dublikat
-    seen.add(k);
-    if(fresh && !keepSigs.has(k)) del.push(r.id); // eski rejadagi vazifa
+    if(fresh && !keepSigs.has(k)){ del.push(r.id); return; } // eski rejadagi vazifa
+    seen.set(k,r.id); keptById.set(k,r.id);
   });
   if(del.length){
     for(let i=0;i<del.length;i+=50) await C.deleteTaskIds(del.slice(i,i+50));
   }
+  // Mahalliy vazifalarni bulutdagi mavjud qatorlarga bog'laymiz — aks holda
+  // sinxronlash ularni yangi qator sifatida qo'shib, ikkitalik yasaydi.
+  (S.tasks||[]).forEach(t=>{
+    const id=keptById.get(sig(t.name,t.start));
+    if(id){ t.cloudId=id; t.id=id; }
+  });
   S.cloudPlanVersion=PLAN_VERSION;
   S.tasks=dedupeTasks(S.tasks);
   persist();
@@ -1166,6 +1177,25 @@ async function cleanCloudTasks(){
   applyDayView(); renderSchedule();
   if(del.length) toast('🧹 '+del.length+' ta takroriy/eski vazifa tozalandi');
 }
+
+// Sozlamalardan: bulutdagi barcha vazifalarni o'chirib, joriy rejani qayta yuklash.
+async function resetCloudTasks(){
+  const C=window.KTCloud;
+  if(!C||!C.isReady||!C.isReady()){ toast('Bulut ulanmagan'); return; }
+  if(C.isViewer&&C.isViewer()){ toast('❌ Faqat koʻruvchi rejimi'); return; }
+  if(!confirm('Bulutdagi barcha vazifalar oʻchiriladi va joriy roʻyxat qayta yuklanadi. Davom etamizmi?')) return;
+  toast('🧹 Bulut tozalanmoqda...');
+  try{
+    const n=await C.wipeTasks();
+    (S.tasks||[]).forEach(t=>{ delete t.cloudId; });
+    S.tasks=dedupeTasks(S.tasks);
+    persist();
+    await C.syncTasks(S.tasks);
+    applyDayView(); renderSchedule();
+    toast('✅ Bulut tozalandi ('+n+' qator) va qayta yuklandi');
+  }catch(e){ console.error(e); toast('❌ Xatolik: '+(e&&e.message||e)); }
+}
+
 
 // ── KUNLIK BELGILASHLAR (har bir kun alohida saqlanadi) ──
 function taskKey(t){ return String((t&&(t.cloudId||t.id))||''); }
@@ -1279,6 +1309,8 @@ function pinSetupKey(k){
     } else {
       if(pinSetupInput===pinSetupFirst){
         S.pinCode=pinSetupInput; S.pinSetupDone=true; persist();
+        try{ localStorage.setItem('kt5_pin',JSON.stringify({done:true,code:S.pinCode})); }catch(e){}
+
         toast('✅ PIN kod o\'rnatildi'); enterApp();
       } else {
         shakeDots('pinSetupDots');
@@ -1289,7 +1321,7 @@ function pinSetupKey(k){
   }
 }
 function pinSetupDel(){ if(pinSetupInput.length>0){pinSetupInput=pinSetupInput.slice(0,-1); updatePinDots('pinSetupDots',pinSetupInput);} }
-function pinSetupSkip(){ S.pinCode='0000'; S.pinSetupDone=true; persist(); toast('Standart PIN: 0000'); enterApp(); }
+function pinSetupSkip(){ S.pinCode='0000'; S.pinSetupDone=true; persist(); try{ localStorage.setItem('kt5_pin',JSON.stringify({done:true,code:'0000'})); }catch(e){} toast('Standart PIN: 0000'); enterApp(); }
 
 function pinLockKey(k){
   if(pinLockInput.length>=4) return;
@@ -1327,6 +1359,8 @@ async function checkSecret(){
     if(res.ok&&data.ok){
       errEl.textContent='';
       S.pinSetupDone=false; persist();
+      try{ localStorage.removeItem('kt5_pin'); }catch(e){}
+
       showPinSetup();
       document.getElementById('lockSub').textContent='Yangi PIN kod o\u2019rnating';
     } else {
@@ -1562,18 +1596,29 @@ function getFilteredTasks(){
   return tasks;
 }
 
-// DOM ni faqat haqiqiy o'zgarish bo'lganda yangilaymiz — aks holda ro'yxat
-// har sinxronlashda qayta chiziladi va vazifani bosish qiyinlashadi.
+// DOM ni faqat haqiqiy o'zgargan kartalar uchun yangilaymiz. Butun ro'yxatni
+// qayta chizish har sinxronlashda animatsiya/sakrashga sabab bo'lardi.
 let _lastSchedHtml=null, _schedPainted=false;
 function paintSched(html){
   const el=document.getElementById('schedList'); if(!el) return;
   const out=html||'<div style="text-align:center;padding:32px;color:var(--tx3);font-size:13px">Vazifalar topilmadi</div>';
   if(out===_lastSchedHtml) return;          // hech nima o'zgarmagan → tegmaymiz
   _lastSchedHtml=out;
+  const tmp=document.createElement('div'); tmp.innerHTML=out;
+  const news=Array.from(tmp.children), olds=Array.from(el.children);
+  const key=n=>(n.id||'')+'#'+(n.className||'').replace(/\bdone\b|\bdeferred\b/g,'').trim();
+  const sameShape = _schedPainted && news.length===olds.length &&
+    news.every((n,i)=>key(n)===key(olds[i]));
+  if(sameShape){
+    // Faqat o'zgargan kartani almashtiramiz — animatsiya qayta ishga tushmaydi.
+    news.forEach((n,i)=>{ if(n.outerHTML!==olds[i].outerHTML) olds[i].replaceWith(n); });
+    return;
+  }
   if(!_schedPainted){ el.classList.add('first-paint'); }
   el.innerHTML=out;
   if(!_schedPainted){ _schedPainted=true; setTimeout(()=>el.classList.remove('first-paint'),700); }
 }
+
 function renderSchedule(){
   updateProgress();
   const tasks=getFilteredTasks();
@@ -1608,7 +1653,7 @@ function renderSchedule(){
 function taskHtml(t,i){
   const dc=t.done?'done':'';
   const defc=t.deferred?'deferred':'';
-  const delayAnim=`animation-delay:${i*30}ms`;
+  const delayAnim=_schedPainted?'':`animation-delay:${i*30}ms`;
   const timeStr=t.start+(t.end&&t.end!==t.start?' – '+t.end:'');
   const tags=[];
   if(t.autoChecked) tags.push('<span class="tc-tag tag-auto">Avto</span>');
@@ -2521,6 +2566,13 @@ function toggleTask(id){
   S.activityLog.unshift({t:Date.now(),msg:(t.done?'✅ ':'↩️ ')+t.name+(date===todayKey()?'':' ('+date+')')});
   S.activityLog=S.activityLog.slice(0,200);
   persist(); renderSchedule(); updateProgress(); renderStreak && renderStreak();
+  // Animatsiya faqat shu bosilgan vazifada
+  try{
+    const card=document.getElementById('tc-'+String(t.cloudId||t.id));
+    if(card){ card.classList.remove('tc-pop'); void card.offsetWidth; card.classList.add('tc-pop');
+      setTimeout(()=>card.classList.remove('tc-pop'),420); }
+  }catch(e){}
+
   if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.saveTaskCompletion(t,t.done,date);
   if(typeof haptic==='function') haptic('light');
 }
@@ -2858,6 +2910,15 @@ function renderSettings(){
       </div>
     </div>
     ${window.KTExtras && window.KTExtras.settingsSection ? window.KTExtras.settingsSection(S) : ''}
+    <div class="st-sec"><h4>☁️ Bulut</h4>
+      <div class="st-row"><span>Takroriy vazifalarni tozalash</span>
+        <button class="st-btn" onclick="cleanCloudTasks()">🧹 Tozalash</button>
+      </div>
+      <div class="st-row"><span>Bulutni butunlay tozalab, joriy roʻyxatni qayta yuklash</span>
+        <button class="st-btn" onclick="resetCloudTasks()" style="border-color:var(--red,#ef4444)">♻️ Qayta yuklash</button>
+      </div>
+    </div>
+
     ${canOpenAdmin ? `
     <div class="st-sec"><h4>🛠️ Admin</h4>
       <div class="st-row"><span>Qurilmalar va QR ruxsatlarni boshqarish</span>
@@ -3045,16 +3106,25 @@ async function changeSecretFlow(){
       applyAnim && applyAnim();
       applyVisibility && applyVisibility();
       const ap=document.getElementById('adminPanel'); if(ap) ap.style.display='none';
-      // Agar qulflash butunlay oʻchirilgan boʻlsa — toʻgʻridan-toʻgʻri ilovaga
-      if(S.lockDisabled){
+      // PIN holati alohida kalitda saqlanadi — bulut sinxronlashi uni o'chirmasin
+      try{
+        const raw=localStorage.getItem('kt5_pin');
+        if(raw){ const p=JSON.parse(raw); if(p&&p.done){ S.pinSetupDone=true; S.pinCode=p.code||S.pinCode; } }
+        else if(S.pinSetupDone){ localStorage.setItem('kt5_pin',JSON.stringify({done:true,code:S.pinCode||'0000'})); }
+      }catch(e){}
+      // Qurulma allaqachon QR/PIN darvozasidan o'tgan bo'lsa, sahifani yangilaganda
+      // qayta PIN so'ralmaydi (faqat harakatsizlikdan keyin qulflanadi).
+      const approved = !!localStorage.getItem('bh_device_token');
+      if(S.lockDisabled || (approved && !S.lockOnReload)){
         const ls=document.getElementById('lockScreen'); if(ls) ls.style.display='none';
         const app=document.getElementById('app'); if(app) app.style.display='block';
         initApp();
-        const lb=document.getElementById('lockBtn'); if(lb) lb.style.display='none';
+        if(S.lockDisabled){ const lb=document.getElementById('lockBtn'); if(lb) lb.style.display='none'; }
         return;
       }
       const ls=document.getElementById('lockScreen'); if(ls) ls.style.display='flex';
       const app=document.getElementById('app'); if(app) app.style.display='none';
+
       if(!S.pinSetupDone){ showPinSetup(); }
       else{ showPinLock(); if(S.bioOn) setTimeout(tryBiometricUnlock,300); }
     }catch(e){ console.error('boot', e); }

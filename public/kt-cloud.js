@@ -335,14 +335,48 @@
     markPending("tasks", 2500);
     if (task.cloudId) {
       await sb.from("tasks").update(row).eq("id", task.cloudId);
-    } else {
-      const { data } = await sb.from("tasks").insert(row).select("id").single();
-      if (data) {
-        task.cloudId = data.id;
-        task.id = data.id;
-      }
+      return;
+    }
+    // No cloudId yet: adopt an existing identical row instead of inserting a
+    // duplicate. Without this, every sync of a local-only task created a copy.
+    const { data: same } = await sb
+      .from("tasks")
+      .select("id")
+      .eq("user_id", state.user.id)
+      .eq("name", row.name)
+      .eq("start_time", row.start_time)
+      .limit(1);
+    if (same && same.length) {
+      task.cloudId = same[0].id;
+      task.id = same[0].id;
+      await sb.from("tasks").update(row).eq("id", same[0].id);
+      return;
+    }
+    const { data } = await sb.from("tasks").insert(row).select("id").single();
+    if (data) {
+      task.cloudId = data.id;
+      task.id = data.id;
     }
   }
+
+  // Bulutdagi barcha vazifalarni o'chirish (to'liq tozalash uchun).
+  async function wipeTasks() {
+    if (!state.ready || isViewer()) return 0;
+    markPending("tasks", 6000);
+    const { data } = await state.sb
+      .from("tasks")
+      .select("id")
+      .eq("user_id", state.user.id);
+    const ids = (data || []).map((r) => r.id);
+    if (ids.length) {
+      for (let i = 0; i < ids.length; i += 50) {
+        await state.sb.from("tasks").delete().in("id", ids.slice(i, i + 50));
+      }
+      await state.sb.from("task_completions").delete().eq("user_id", state.user.id);
+    }
+    return ids.length;
+  }
+
 
   async function deleteTaskCloud(task) {
     if (!state.ready || !task || !task.cloudId || isViewer()) return;
@@ -588,6 +622,8 @@
     removeDevice,
     listTaskRows,
     deleteTaskIds,
+    wipeTasks,
+
     isViewer,
     getUser: () => state.user,
     getDeviceId: () => state.deviceId,
