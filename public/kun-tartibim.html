@@ -3102,16 +3102,25 @@ async function changeSecretFlow(){
       applyAnim && applyAnim();
       applyVisibility && applyVisibility();
       const ap=document.getElementById('adminPanel'); if(ap) ap.style.display='none';
-      // Agar qulflash butunlay oʻchirilgan boʻlsa — toʻgʻridan-toʻgʻri ilovaga
-      if(S.lockDisabled){
+      // PIN holati alohida kalitda saqlanadi — bulut sinxronlashi uni o'chirmasin
+      try{
+        const raw=localStorage.getItem('kt5_pin');
+        if(raw){ const p=JSON.parse(raw); if(p&&p.done){ S.pinSetupDone=true; S.pinCode=p.code||S.pinCode; } }
+        else if(S.pinSetupDone){ localStorage.setItem('kt5_pin',JSON.stringify({done:true,code:S.pinCode||'0000'})); }
+      }catch(e){}
+      // Qurulma allaqachon QR/PIN darvozasidan o'tgan bo'lsa, sahifani yangilaganda
+      // qayta PIN so'ralmaydi (faqat harakatsizlikdan keyin qulflanadi).
+      const approved = !!localStorage.getItem('bh_device_token');
+      if(S.lockDisabled || (approved && !S.lockOnReload)){
         const ls=document.getElementById('lockScreen'); if(ls) ls.style.display='none';
         const app=document.getElementById('app'); if(app) app.style.display='block';
         initApp();
-        const lb=document.getElementById('lockBtn'); if(lb) lb.style.display='none';
+        if(S.lockDisabled){ const lb=document.getElementById('lockBtn'); if(lb) lb.style.display='none'; }
         return;
       }
       const ls=document.getElementById('lockScreen'); if(ls) ls.style.display='flex';
       const app=document.getElementById('app'); if(app) app.style.display='none';
+
       if(!S.pinSetupDone){ showPinSetup(); }
       else{ showPinLock(); if(S.bioOn) setTimeout(tryBiometricUnlock,300); }
     }catch(e){ console.error('boot', e); }
