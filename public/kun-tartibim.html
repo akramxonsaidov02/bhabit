@@ -2558,6 +2558,13 @@ function toggleTask(id){
   S.activityLog.unshift({t:Date.now(),msg:(t.done?'✅ ':'↩️ ')+t.name+(date===todayKey()?'':' ('+date+')')});
   S.activityLog=S.activityLog.slice(0,200);
   persist(); renderSchedule(); updateProgress(); renderStreak && renderStreak();
+  // Animatsiya faqat shu bosilgan vazifada
+  try{
+    const card=document.getElementById('tc-'+String(t.cloudId||t.id));
+    if(card){ card.classList.remove('tc-pop'); void card.offsetWidth; card.classList.add('tc-pop');
+      setTimeout(()=>card.classList.remove('tc-pop'),420); }
+  }catch(e){}
+
   if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.saveTaskCompletion(t,t.done,date);
   if(typeof haptic==='function') haptic('light');
 }
