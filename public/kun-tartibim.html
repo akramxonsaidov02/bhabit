@@ -1309,6 +1309,8 @@ function pinSetupKey(k){
     } else {
       if(pinSetupInput===pinSetupFirst){
         S.pinCode=pinSetupInput; S.pinSetupDone=true; persist();
+        try{ localStorage.setItem('kt5_pin',JSON.stringify({done:true,code:S.pinCode})); }catch(e){}
+
         toast('✅ PIN kod o\'rnatildi'); enterApp();
       } else {
         shakeDots('pinSetupDots');
