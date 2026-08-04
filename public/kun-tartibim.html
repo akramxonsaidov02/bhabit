@@ -1145,20 +1145,27 @@ async function cleanCloudTasks(){
   if(!C||!C.isReady||!C.isReady()||C.isViewer&&C.isViewer()) return;
   if(!C.listTaskRows||!C.deleteTaskIds) return;
   const rows=await C.listTaskRows();
-  if(!rows.length) return;
-  const sig=(n,s,e)=>String(n||'').trim().toLowerCase()+'|'+(s||'')+'|'+(e||'');
-  const keepSigs=new Set((S.tasks||[]).map(t=>sig(t.name,t.start,t.end)));
+  // Dublikat aniqlash faqat nom+boshlanish vaqti bo'yicha (tugash vaqti mos
+  // kelmagani uchun eski nusxalar qayta-qayta paydo bo'lardi).
+  const sig=(n,s)=>String(n||'').trim().toLowerCase()+'|'+String(s||'').slice(0,5);
+  const keepSigs=new Set((S.tasks||[]).map(t=>sig(t.name,t.start)));
   const fresh=S.cloudPlanVersion!==PLAN_VERSION;
-  const seen=new Set(); const del=[];
+  const keptById=new Map(); const seen=new Map(); const del=[];
   rows.forEach(r=>{
-    const k=sig(r.name,r.start_time,r.end_time);
+    const k=sig(r.name,r.start_time);
     if(seen.has(k)){ del.push(r.id); return; }   // dublikat
-    seen.add(k);
-    if(fresh && !keepSigs.has(k)) del.push(r.id); // eski rejadagi vazifa
+    if(fresh && !keepSigs.has(k)){ del.push(r.id); return; } // eski rejadagi vazifa
+    seen.set(k,r.id); keptById.set(k,r.id);
   });
   if(del.length){
     for(let i=0;i<del.length;i+=50) await C.deleteTaskIds(del.slice(i,i+50));
   }
+  // Mahalliy vazifalarni bulutdagi mavjud qatorlarga bog'laymiz — aks holda
+  // sinxronlash ularni yangi qator sifatida qo'shib, ikkitalik yasaydi.
+  (S.tasks||[]).forEach(t=>{
+    const id=keptById.get(sig(t.name,t.start));
+    if(id){ t.cloudId=id; t.id=id; }
+  });
   S.cloudPlanVersion=PLAN_VERSION;
   S.tasks=dedupeTasks(S.tasks);
   persist();
@@ -1166,6 +1173,25 @@ async function cleanCloudTasks(){
   applyDayView(); renderSchedule();
   if(del.length) toast('🧹 '+del.length+' ta takroriy/eski vazifa tozalandi');
 }
+
+// Sozlamalardan: bulutdagi barcha vazifalarni o'chirib, joriy rejani qayta yuklash.
+async function resetCloudTasks(){
+  const C=window.KTCloud;
+  if(!C||!C.isReady||!C.isReady()){ toast('Bulut ulanmagan'); return; }
+  if(C.isViewer&&C.isViewer()){ toast('❌ Faqat koʻruvchi rejimi'); return; }
+  if(!confirm('Bulutdagi barcha vazifalar oʻchiriladi va joriy roʻyxat qayta yuklanadi. Davom etamizmi?')) return;
+  toast('🧹 Bulut tozalanmoqda...');
+  try{
+    const n=await C.wipeTasks();
+    (S.tasks||[]).forEach(t=>{ delete t.cloudId; });
+    S.tasks=dedupeTasks(S.tasks);
+    persist();
+    await C.syncTasks(S.tasks);
+    applyDayView(); renderSchedule();
+    toast('✅ Bulut tozalandi ('+n+' qator) va qayta yuklandi');
+  }catch(e){ console.error(e); toast('❌ Xatolik: '+(e&&e.message||e)); }
+}
+
 
 // ── KUNLIK BELGILASHLAR (har bir kun alohida saqlanadi) ──
 function taskKey(t){ return String((t&&(t.cloudId||t.id))||''); }
