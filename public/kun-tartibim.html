@@ -2884,6 +2884,15 @@ function renderSettings(){
       </div>
     </div>
     ${window.KTExtras && window.KTExtras.settingsSection ? window.KTExtras.settingsSection(S) : ''}
+    <div class="st-sec"><h4>☁️ Bulut</h4>
+      <div class="st-row"><span>Takroriy vazifalarni tozalash</span>
+        <button class="st-btn" onclick="cleanCloudTasks()">🧹 Tozalash</button>
+      </div>
+      <div class="st-row"><span>Bulutni butunlay tozalab, joriy roʻyxatni qayta yuklash</span>
+        <button class="st-btn" onclick="resetCloudTasks()" style="border-color:var(--red,#ef4444)">♻️ Qayta yuklash</button>
+      </div>
+    </div>
+
     ${canOpenAdmin ? `
     <div class="st-sec"><h4>🛠️ Admin</h4>
       <div class="st-row"><span>Qurilmalar va QR ruxsatlarni boshqarish</span>
