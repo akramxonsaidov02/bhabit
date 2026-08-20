@@ -395,11 +395,22 @@ body::before {
 /* accent bar */
 .tc-bar { width:3px; flex-shrink:0; background:var(--bdr3); transition:background .2s; }
 .tc.done .tc-bar { background:var(--accent); }
-.cat-prayer   .tc-bar { background:var(--amber); }
-.cat-sport    .tc-bar { background:var(--blue); }
-.cat-medicine .tc-bar { background:var(--purple); }
-.cat-food     .tc-bar { background:var(--orange); }
-.cat-work     .tc-bar { background:var(--accent); }
+.cat-prayer   .tc-bar { background:#f59e0b; }
+.cat-sport    .tc-bar { background:#3b82f6; }
+.cat-medicine .tc-bar { background:#a78bfa; }
+.cat-food     .tc-bar { background:#f97316; }
+.cat-work     .tc-bar { background:#14b8a6; }
+.cat-english  .tc-bar { background:#38bdf8; }
+.cat-rtm      .tc-bar { background:#22c55e; }
+.cat-ibrat    .tc-bar { background:#a855f7; }
+.cat-rest     .tc-bar { background:#eab308; }
+.cat-english  { border-left:0; }
+/* Kechikkan vazifa — qizil chegara */
+.tc.late { border:1.5px solid rgba(239,68,68,.75) !important; box-shadow:0 0 0 2px rgba(239,68,68,.12); }
+.tc.late .tc-body-name::after { content:' ⏰'; }
+/* Qulflangan erkin vaqt */
+.tc.locked { opacity:.55; pointer-events:none; filter:grayscale(.5); }
+.tc.locked .tc-body-note { color:#f59e0b; }
 
 .tc-inner { flex:1; display:flex; align-items:center; gap:10px; padding:12px 12px; }
 
