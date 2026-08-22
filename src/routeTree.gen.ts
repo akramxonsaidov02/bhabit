@@ -13,6 +13,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVoiceTranscribeRouteImport } from './routes/api/voice-transcribe'
 import { Route as ApiAiPlanRouteImport } from './routes/api/ai-plan'
+import { Route as ApiPublicReportTelegramRouteImport } from './routes/api/public/report/telegram'
 import { Route as ApiPublicGateActionRouteImport } from './routes/api/public/gate/$action'
 
 const AdminRoute = AdminRouteImport.update({
@@ -35,6 +36,11 @@ const ApiAiPlanRoute = ApiAiPlanRouteImport.update({
   path: '/api/ai-plan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicReportTelegramRoute = ApiPublicReportTelegramRouteImport.update({
+  id: '/api/public/report/telegram',
+  path: '/api/public/report/telegram',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicGateActionRoute = ApiPublicGateActionRouteImport.update({
   id: '/api/public/gate/$action',
   path: '/api/public/gate/$action',
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/api/ai-plan': typeof ApiAiPlanRoute
   '/api/voice-transcribe': typeof ApiVoiceTranscribeRoute
   '/api/public/gate/$action': typeof ApiPublicGateActionRoute
+  '/api/public/report/telegram': typeof ApiPublicReportTelegramRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/api/ai-plan': typeof ApiAiPlanRoute
   '/api/voice-transcribe': typeof ApiVoiceTranscribeRoute
   '/api/public/gate/$action': typeof ApiPublicGateActionRoute
+  '/api/public/report/telegram': typeof ApiPublicReportTelegramRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,6 +70,7 @@ export interface FileRoutesById {
   '/api/ai-plan': typeof ApiAiPlanRoute
   '/api/voice-transcribe': typeof ApiVoiceTranscribeRoute
   '/api/public/gate/$action': typeof ApiPublicGateActionRoute
+  '/api/public/report/telegram': typeof ApiPublicReportTelegramRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -71,6 +80,7 @@ export interface FileRouteTypes {
     | '/api/ai-plan'
     | '/api/voice-transcribe'
     | '/api/public/gate/$action'
+    | '/api/public/report/telegram'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -78,6 +88,7 @@ export interface FileRouteTypes {
     | '/api/ai-plan'
     | '/api/voice-transcribe'
     | '/api/public/gate/$action'
+    | '/api/public/report/telegram'
   id:
     | '__root__'
     | '/'
@@ -85,6 +96,7 @@ export interface FileRouteTypes {
     | '/api/ai-plan'
     | '/api/voice-transcribe'
     | '/api/public/gate/$action'
+    | '/api/public/report/telegram'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -93,6 +105,7 @@ export interface RootRouteChildren {
   ApiAiPlanRoute: typeof ApiAiPlanRoute
   ApiVoiceTranscribeRoute: typeof ApiVoiceTranscribeRoute
   ApiPublicGateActionRoute: typeof ApiPublicGateActionRoute
+  ApiPublicReportTelegramRoute: typeof ApiPublicReportTelegramRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -125,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAiPlanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/report/telegram': {
+      id: '/api/public/report/telegram'
+      path: '/api/public/report/telegram'
+      fullPath: '/api/public/report/telegram'
+      preLoaderRoute: typeof ApiPublicReportTelegramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/gate/$action': {
       id: '/api/public/gate/$action'
       path: '/api/public/gate/$action'
@@ -141,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiPlanRoute: ApiAiPlanRoute,
   ApiVoiceTranscribeRoute: ApiVoiceTranscribeRoute,
   ApiPublicGateActionRoute: ApiPublicGateActionRoute,
+  ApiPublicReportTelegramRoute: ApiPublicReportTelegramRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
