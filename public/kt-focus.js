@@ -33,7 +33,7 @@
 #focusCard .fc-acts button{flex:1;min-width:88px;padding:9px 8px;border-radius:12px;border:1px solid var(--bdr2,rgba(255,255,255,.12));background:rgba(148,163,184,.1);color:var(--tx,#e8ecf5);font:600 12px/1 inherit;cursor:pointer}
 #focusCard .fc-acts button.pri{background:rgba(34,197,94,.16);border-color:rgba(34,197,94,.4);color:#22c55e}
 #focusCard .fc-acts button.def{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.35);color:#f59e0b}
-#ktLateBar{position:fixed;left:0;right:0;bottom:64px;z-index:60;margin:0 12px;padding:10px 12px;border-radius:14px;background:rgba(239,68,68,.94);color:#fff;font:600 12.5px/1.35 inherit;display:none;align-items:center;gap:10px;box-shadow:0 8px 26px rgba(239,68,68,.35)}
+#ktLateBar{position:static;margin:0 0 12px;padding:10px 12px;border-radius:14px;background:rgba(239,68,68,.94);color:#fff;font:600 12.5px/1.35 inherit;display:none;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(239,68,68,.28)}
 #ktLateBar.show{display:flex;animation:ktLatePulse 1.6s ease-in-out infinite}
 #ktLateBar button{margin-left:auto;background:rgba(255,255,255,.2);border:0;color:#fff;padding:7px 11px;border-radius:10px;font:700 12px/1 inherit;cursor:pointer}
 @keyframes ktLatePulse{0%,100%{box-shadow:0 8px 26px rgba(239,68,68,.3)}50%{box-shadow:0 8px 34px rgba(239,68,68,.65)}}
@@ -66,7 +66,11 @@
       const b = document.createElement('div');
       b.id = 'ktLateBar';
       b.innerHTML = '<span id="ktLateTxt"></span><button onclick="KTFocus.jump()">Ochish</button>';
-      document.body.appendChild(b);
+      const host = $('pgHome');
+      const fc = $('focusCard');
+      if (host && fc && fc.parentNode === host) host.insertBefore(b, fc.nextSibling);
+      else if (host) host.insertBefore(b, host.firstChild);
+      else document.body.appendChild(b);
     }
     if (!$('ktReasonOv')) {
       const o = document.createElement('div');
@@ -224,7 +228,7 @@
     try { toast(title); } catch (e) {}
   }
   function escalate() {
-    if (!ready() || S.notifOn === false) return;
+    if (!ready() || S.notifOn === false || S.focusAlerts === false) return;
     if (typeof isToday === 'function' && !isToday()) return;
     const n = nowMin(), day = typeof todayKey === 'function' ? todayKey() : '';
     let lateTask = null;
@@ -351,8 +355,31 @@
     }
   }
 
+  function openLog() {
+    const log = (S && S.deferLog) || [];
+    let ov = $('ktLogOv');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'ktLogOv';
+      ov.id = 'ktLogOv';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:130;background:rgba(2,6,23,.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center';
+      ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+      document.body.appendChild(ov);
+    }
+    const rows = log.slice(0, 60).map((x) => {
+      const d = new Date(x.ts);
+      return '<div style="display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid rgba(148,163,184,.14);font-size:12.5px">' +
+        '<span style="color:var(--tx,#e8ecf5)">' + esc2(x.name || '—') + '<br><small style="color:var(--tx3,#8b93a7)">' + esc2(x.reason || '') + '</small></span>' +
+        '<span style="color:var(--tx3,#8b93a7);white-space:nowrap">' + pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '</span></div>';
+    }).join('') || '<div style="color:var(--tx3,#8b93a7);font-size:12.5px;padding:10px 0">Yozuv yo‘q.</div>';
+    ov.innerHTML = '<div style="width:100%;max-width:520px;max-height:76vh;overflow:auto;background:var(--bg2,#0f172a);border-radius:18px 18px 0 0;padding:18px">' +
+      '<h4 style="margin:0 0 10px;color:var(--tx,#e8ecf5);font-size:15px">⏳ Kechiktirish tarixi</h4>' + rows +
+      '<button style="width:100%;margin-top:12px;padding:11px;border-radius:12px;border:1px solid rgba(148,163,184,.2);background:rgba(148,163,184,.08);color:var(--tx,#e8ecf5);font:600 13px/1 inherit;cursor:pointer" onclick="document.getElementById(\'ktLogOv\').remove()">Yopish</button></div>';
+  }
+
   window.KTFocus = {
     refresh,
+    openLog,
     done() { if (cardTaskId != null && typeof toggleTask === 'function') toggleTask(cardTaskId); refresh(); },
     start() { if (cardTaskId != null && typeof openFocusMode === 'function') openFocusMode(cardTaskId); },
     defer() { if (cardTaskId != null) askReason(cardTaskId); },

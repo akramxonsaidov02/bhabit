@@ -2951,6 +2951,18 @@ function renderSettings(){
       <div class="st-row"><span>Ilova nomi</span><input type="text" value="${esc(S.appName||'Kun Tartibim')}" class="st-sel" onchange="S.appName=this.value.trim()||'Kun Tartibim';persist();updateTopbar()"></div>
     </div>
 
+    <div class="st-sec"><h4>🎯 Fokus</h4>
+      <div class="st-row"><span>🔒 Soft-lock<br><small style="color:var(--tx3);font-weight:400">Majburiy vazifalar bajarilmaguncha erkin/dam bloklari qulflanadi</small></span>
+        <input type="checkbox" ${S.softLock!==false?'checked':''} onchange="S.softLock=this.checked;persist();try{window.KTFocus&&KTFocus.refresh&&KTFocus.refresh()}catch(e){};try{renderSchedule()}catch(e){}">
+      </div>
+      <div class="st-row"><span>🔔 Eskalatsiya ogohlantirishlari<br><small style="color:var(--tx3);font-weight:400">5 daqiqa oldin, boshlanganda va 10 daqiqa kechikkanda</small></span>
+        <input type="checkbox" ${S.focusAlerts!==false?'checked':''} onchange="S.focusAlerts=this.checked;persist()">
+      </div>
+      <div class="st-row"><span>Kechiktirish sabablari tarixi</span>
+        <button class="st-btn" onclick="try{KTFocus.openLog()}catch(e){toast('Mavjud emas')}">⏳ Ko‘rish</button>
+      </div>
+    </div>
+
     <div class="st-sec"><h4>\ud83c\udf10 Til</h4>
       <div class="st-btns">${langs.map(([k,n])=>`<button onclick="setLang('${k}')" class="${(S.lang||'uz')===k?'on':''}">${n}</button>`).join('')}</div>
     </div>
