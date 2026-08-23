@@ -239,6 +239,22 @@ function Gate() {
             >
               {busy ? "Tekshirilmoqda…" : "Kirish"}
             </button>
+            {qrCode && (
+              <button
+                type="button"
+                onClick={() => setScreen("qr")}
+                style={{
+                  marginTop: 12,
+                  background: "transparent",
+                  border: "none",
+                  color: "#8a8a99",
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                ← QR kodga qaytish
+              </button>
+            )}
           </form>
         )}
 
