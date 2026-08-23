@@ -490,7 +490,7 @@
               .concat(st.extras.deferLog)
               .filter((x) => {
                 if (!x || !x.ts) return false;
-                const k = x.ts + "|" + (x.id || x.name || "");
+                const k = x.ts + "|" + (x.taskId || x.name || "");
                 if (seen.has(k)) return false;
                 seen.add(k);
                 return true;
