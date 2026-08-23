@@ -480,6 +480,24 @@
           if (st.extras.appName) S.appName = st.extras.appName;
           if (st.extras.accent) S.accent = st.extras.accent;
           if (st.extras.location) S.location = st.extras.location;
+          if (typeof st.extras.softLock === "boolean") S.softLock = st.extras.softLock;
+          if (typeof st.extras.focusAlerts === "boolean") S.focusAlerts = st.extras.focusAlerts;
+          if (Array.isArray(st.extras.deferLog)) {
+            // Merge remote + local defer entries by timestamp+task, newest first.
+            const local = Array.isArray(S.deferLog) ? S.deferLog : [];
+            const seen = new Set();
+            S.deferLog = local
+              .concat(st.extras.deferLog)
+              .filter((x) => {
+                if (!x || !x.ts) return false;
+                const k = x.ts + "|" + (x.id || x.name || "");
+                if (seen.has(k)) return false;
+                seen.add(k);
+                return true;
+              })
+              .sort((a, b) => b.ts - a.ts)
+              .slice(0, 300);
+          }
         }
       }
       writeLocalS(S);
