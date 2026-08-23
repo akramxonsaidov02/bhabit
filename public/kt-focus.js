@@ -228,7 +228,7 @@
     try { toast(title); } catch (e) {}
   }
   function escalate() {
-    if (!ready() || S.notifOn === false) return;
+    if (!ready() || S.notifOn === false || S.focusAlerts === false) return;
     if (typeof isToday === 'function' && !isToday()) return;
     const n = nowMin(), day = typeof todayKey === 'function' ? todayKey() : '';
     let lateTask = null;
