@@ -207,6 +207,8 @@
     });
     S.deferLog = S.deferLog.slice(0, 500);
     try { persist(); } catch (e) {}
+    // Push the defer log to the cloud so reasons follow the user across devices.
+    try { window.KTCloud && KTCloud.pushSettings && KTCloud.pushSettings(S); } catch (e) {}
     try { renderSchedule(); } catch (e) {}
     refresh();
     try { toast('⏳ Sabab yozildi: ' + r); } catch (e) {}
