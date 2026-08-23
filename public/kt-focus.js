@@ -66,7 +66,11 @@
       const b = document.createElement('div');
       b.id = 'ktLateBar';
       b.innerHTML = '<span id="ktLateTxt"></span><button onclick="KTFocus.jump()">Ochish</button>';
-      document.body.appendChild(b);
+      const host = $('pgHome');
+      const fc = $('focusCard');
+      if (host && fc && fc.parentNode === host) host.insertBefore(b, fc.nextSibling);
+      else if (host) host.insertBefore(b, host.firstChild);
+      else document.body.appendChild(b);
     }
     if (!$('ktReasonOv')) {
       const o = document.createElement('div');
