@@ -239,6 +239,22 @@ function Gate() {
             >
               {busy ? "Tekshirilmoqda…" : "Kirish"}
             </button>
+            {qrCode && (
+              <button
+                type="button"
+                onClick={() => setScreen("qr")}
+                style={{
+                  marginTop: 12,
+                  background: "transparent",
+                  border: "none",
+                  color: "#8a8a99",
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                ← QR kodga qaytish
+              </button>
+            )}
           </form>
         )}
 
@@ -262,6 +278,24 @@ function Gate() {
             <p style={{ marginTop: 20, opacity: 0.5, fontSize: 13 }}>
               Admin tasdiqlaganidan so'ng avtomatik kirasiz.
             </p>
+            <button
+              onClick={() => {
+                setMessage("");
+                setScreen("pin");
+              }}
+              style={{
+                marginTop: 18,
+                padding: "10px 18px",
+                borderRadius: 10,
+                border: "1px solid #2a2a35",
+                background: "transparent",
+                color: "#a5b4fc",
+                cursor: "pointer",
+                fontSize: 13.5,
+              }}
+            >
+              Admin maxfiy kodi bilan kirish
+            </button>
           </div>
         )}
 
