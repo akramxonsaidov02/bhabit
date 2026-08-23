@@ -304,6 +304,9 @@
         appName: localS.appName,
         accent: localS.accent,
         location: localS.location,
+        softLock: localS.softLock !== false,
+        focusAlerts: localS.focusAlerts !== false,
+        deferLog: Array.isArray(localS.deferLog) ? localS.deferLog.slice(0, 200) : [],
       },
     };
     await sb.from("user_settings").upsert(settingsPayload, { onConflict: "user_id" });
