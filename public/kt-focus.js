@@ -33,7 +33,7 @@
 #focusCard .fc-acts button{flex:1;min-width:88px;padding:9px 8px;border-radius:12px;border:1px solid var(--bdr2,rgba(255,255,255,.12));background:rgba(148,163,184,.1);color:var(--tx,#e8ecf5);font:600 12px/1 inherit;cursor:pointer}
 #focusCard .fc-acts button.pri{background:rgba(34,197,94,.16);border-color:rgba(34,197,94,.4);color:#22c55e}
 #focusCard .fc-acts button.def{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.35);color:#f59e0b}
-#ktLateBar{position:fixed;left:0;right:0;bottom:64px;z-index:60;margin:0 12px;padding:10px 12px;border-radius:14px;background:rgba(239,68,68,.94);color:#fff;font:600 12.5px/1.35 inherit;display:none;align-items:center;gap:10px;box-shadow:0 8px 26px rgba(239,68,68,.35)}
+#ktLateBar{position:static;margin:0 0 12px;padding:10px 12px;border-radius:14px;background:rgba(239,68,68,.94);color:#fff;font:600 12.5px/1.35 inherit;display:none;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(239,68,68,.28)}
 #ktLateBar.show{display:flex;animation:ktLatePulse 1.6s ease-in-out infinite}
 #ktLateBar button{margin-left:auto;background:rgba(255,255,255,.2);border:0;color:#fff;padding:7px 11px;border-radius:10px;font:700 12px/1 inherit;cursor:pointer}
 @keyframes ktLatePulse{0%,100%{box-shadow:0 8px 26px rgba(239,68,68,.3)}50%{box-shadow:0 8px 34px rgba(239,68,68,.65)}}
