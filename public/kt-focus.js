@@ -355,8 +355,31 @@
     }
   }
 
+  function openLog() {
+    const log = (S && S.deferLog) || [];
+    let ov = $('ktLogOv');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'ktLogOv';
+      ov.id = 'ktLogOv';
+      ov.style.cssText = 'position:fixed;inset:0;z-index:130;background:rgba(2,6,23,.75);backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center';
+      ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+      document.body.appendChild(ov);
+    }
+    const rows = log.slice(0, 60).map((x) => {
+      const d = new Date(x.ts);
+      return '<div style="display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid rgba(148,163,184,.14);font-size:12.5px">' +
+        '<span style="color:var(--tx,#e8ecf5)">' + esc2(x.name || '—') + '<br><small style="color:var(--tx3,#8b93a7)">' + esc2(x.reason || '') + '</small></span>' +
+        '<span style="color:var(--tx3,#8b93a7);white-space:nowrap">' + pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '</span></div>';
+    }).join('') || '<div style="color:var(--tx3,#8b93a7);font-size:12.5px;padding:10px 0">Yozuv yo‘q.</div>';
+    ov.innerHTML = '<div style="width:100%;max-width:520px;max-height:76vh;overflow:auto;background:var(--bg2,#0f172a);border-radius:18px 18px 0 0;padding:18px">' +
+      '<h4 style="margin:0 0 10px;color:var(--tx,#e8ecf5);font-size:15px">⏳ Kechiktirish tarixi</h4>' + rows +
+      '<button style="width:100%;margin-top:12px;padding:11px;border-radius:12px;border:1px solid rgba(148,163,184,.2);background:rgba(148,163,184,.08);color:var(--tx,#e8ecf5);font:600 13px/1 inherit;cursor:pointer" onclick="document.getElementById(\'ktLogOv\').remove()">Yopish</button></div>';
+  }
+
   window.KTFocus = {
     refresh,
+    openLog,
     done() { if (cardTaskId != null && typeof toggleTask === 'function') toggleTask(cardTaskId); refresh(); },
     start() { if (cardTaskId != null && typeof openFocusMode === 'function') openFocusMode(cardTaskId); },
     defer() { if (cardTaskId != null) askReason(cardTaskId); },
