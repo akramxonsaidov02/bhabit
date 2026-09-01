@@ -118,6 +118,173 @@ export type Database = {
         }
         Relationships: []
       }
+      devices: {
+        Row: {
+          created_at: string
+          device_name: string | null
+          id: string
+          is_master: boolean
+          last_seen: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_name?: string | null
+          id?: string
+          is_master?: boolean
+          last_seen?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_name?: string | null
+          id?: string
+          is_master?: boolean
+          last_seen?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          master_device_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          master_device_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          master_device_id?: string | null
+        }
+        Relationships: []
+      }
+      task_completions: {
+        Row: {
+          completed_at: string | null
+          completion_date: string
+          done: boolean
+          id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completion_date: string
+          done?: boolean
+          id?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          completion_date?: string
+          done?: boolean
+          id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_completions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          auto_complete: boolean
+          category: string
+          created_at: string
+          day_type: string | null
+          end_time: string
+          id: string
+          name: string
+          note: string | null
+          priority: string
+          sort_order: number
+          start_time: string
+          user_id: string
+        }
+        Insert: {
+          auto_complete?: boolean
+          category?: string
+          created_at?: string
+          day_type?: string | null
+          end_time?: string
+          id?: string
+          name: string
+          note?: string | null
+          priority?: string
+          sort_order?: number
+          start_time?: string
+          user_id: string
+        }
+        Update: {
+          auto_complete?: boolean
+          category?: string
+          created_at?: string
+          day_type?: string | null
+          end_time?: string
+          id?: string
+          name?: string
+          note?: string | null
+          priority?: string
+          sort_order?: number
+          start_time?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          ai_replan_on: boolean
+          auto_shift_on_day_change: boolean
+          auto_shift_on_prayer_change: boolean
+          day_start: string
+          extras: Json
+          notif_on: boolean
+          prayers: Json
+          sleep_time: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_replan_on?: boolean
+          auto_shift_on_day_change?: boolean
+          auto_shift_on_prayer_change?: boolean
+          day_start?: string
+          extras?: Json
+          notif_on?: boolean
+          prayers?: Json
+          sleep_time?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_replan_on?: boolean
+          auto_shift_on_day_change?: boolean
+          auto_shift_on_prayer_change?: boolean
+          day_start?: string
+          extras?: Json
+          notif_on?: boolean
+          prayers?: Json
+          sleep_time?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
