@@ -163,6 +163,7 @@
       auto_complete: !!t.autoComplete,
       note: t.note || null,
       sort_order: Number(t.order || 0),
+      day_type: t.dayType || null,
     };
   }
 
@@ -178,8 +179,18 @@
       autoComplete: !!row.auto_complete,
       note: row.note || "",
       order: row.sort_order || 0,
+      dayType: row.day_type || null,
+      days:
+        row.day_type === "dars_kuni"
+          ? [1, 3, 5]
+          : row.day_type === "dars_yoq_kun"
+            ? [2, 4, 6]
+            : row.day_type === "yakshanba"
+              ? [0]
+              : undefined,
     };
   }
+
 
   function readLocalS() {
     try {
