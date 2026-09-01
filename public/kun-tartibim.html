@@ -1026,11 +1026,12 @@ body.page-not-home #ktMicFab, body.page-not-home .fab { display:none !important;
 // SECURITY: no credentials or recovery codes are shipped to the browser.
 // Device authorisation is handled server-side by the QR/PIN gate
 // (see /api/public/gate/*). PIN recovery verifies the master PIN on the server.
-const PRIORITY = { prayer:10, english:9, rtm:8, medicine:8, ibrat:7, sport:6, work:5, food:4, morning:3, other:2, rest:2, night:1 };
+const PRIORITY = { prayer:10, english:9, school:9, rtm:8, medicine:8, ibrat:7, sport:6, work:5, food:4, morning:3, other:2, rest:2, night:1 };
 const CATS = {
   morning:  { l:'Ertalab',          icon:'🌅', color:'#94a3b8' },
   prayer:   { l:'Namoz',            icon:'🕌', color:'#f59e0b' },
   english:  { l:'Ingliz tili',      icon:'🇬🇧', color:'#38bdf8' },
+  school:   { l:'Maktab',           icon:'🎒', color:'#0ea5e9' },
   rtm:      { l:'RTM',              icon:'🏫', color:'#22c55e' },
   ibrat:    { l:'IBRAT Academy',    icon:'📚', color:'#a855f7' },
   work:     { l:'Ish / Loyiha',     icon:'💼', color:'#14b8a6' },
@@ -1042,91 +1043,105 @@ const CATS = {
   night:    { l:'Kechasi',          icon:'🌙', color:'#64748b' },
 };
 // Qulflangan erkin vaqt uchun majburiy kategoriyalar
-const MANDATORY_CATS = ['prayer','english','rtm','ibrat'];
+const MANDATORY_CATS = ['prayer','english','rtm','ibrat','school'];
+
 
 // ═══════════════════════════════════════
 //  DEFAULT TASKS
 // ═══════════════════════════════════════
-// days: [0=Yakshanba ... 6=Shanba]. Bo'sh bo'lsa — har kuni.
-// Ingliz tili darsi: Dushanba (1), Chorshanba (3), Juma (5) — soat 15:00.
-const PLAN_VERSION = 5;
+// days: [0=Yakshanba ... 6=Shanba]. Har bir vazifa aniq bitta kun turiga tegishli.
+// dayType: 'dars_kuni' (Du/Chor/Ju) | 'dars_yoq_kun' (Se/Pay/Sha) | 'yakshanba'
+const PLAN_VERSION = 6;
 const LESSON_DAYS = [1,3,5];
 const FREE_DAYS   = [2,4,6];
 const SUNDAY      = [0];
 // free:true — "erkin/dam" bloklari. Majburiy vazifalar bajarilmaguncha qulflanadi.
 const DEFTASKS = [
-  // ── HAR KUNI ──
-  {id:1,  name:"Uyg‘onish",              start:"03:45",end:"03:55",cat:"morning", note:"Telefonni qo‘lga olma"},
-  {id:2,  name:"Tahorat (Bomdod)",       start:"03:55",end:"04:00",cat:"prayer",  note:"5 daqiqa"},
-  {id:3,  name:"Bomdod namozi",          start:"04:00",end:"04:10",cat:"prayer",  note:""},
-  {id:4,  name:"Dua / salovat (Bomdod)", start:"04:10",end:"04:20",cat:"prayer",  note:"10 daqiqa"},
-  {id:5,  name:"Ingliz: 15–20 so‘z yodlash", start:"04:20",end:"04:50",cat:"english", note:"Anki / daftar"},
-  {id:6,  name:"Sport + audio tinglash", start:"04:50",end:"05:30",cat:"sport",   note:"Podkast yoki shadowing"},
-  {id:7,  name:"Dush / tayyorgarlik",    start:"05:30",end:"06:00",cat:"morning", note:""},
-  {id:8,  name:"Nonushta",               start:"06:00",end:"06:30",cat:"food",    note:""},
-  {id:30, name:"Tahorat (Peshin)",       start:"12:20",end:"12:25",cat:"prayer",  note:""},
-  {id:31, name:"Peshin namozi",          start:"12:30",end:"12:42",cat:"prayer",  note:""},
-  {id:32, name:"Dua / salovat (Peshin)", start:"12:42",end:"12:52",cat:"prayer",  note:""},
-  {id:33, name:"Tushlik",                start:"12:52",end:"13:30",cat:"food",    note:""},
-  {id:34, name:"Tahorat (Asr)",          start:"17:00",end:"17:05",cat:"prayer",  note:""},
-  {id:35, name:"Asr namozi",             start:"17:05",end:"17:15",cat:"prayer",  note:""},
-  {id:36, name:"Dua / salovat (Asr)",    start:"17:15",end:"17:25",cat:"prayer",  note:""},
-  {id:37, name:"Tahorat (Shom)",         start:"19:00",end:"19:05",cat:"prayer",  note:""},
-  {id:38, name:"Shom namozi",            start:"19:05",end:"19:13",cat:"prayer",  note:""},
-  {id:39, name:"Dua / salovat (Shom)",   start:"19:13",end:"19:23",cat:"prayer",  note:""},
-  {id:40, name:"Kechki ovqat",           start:"19:23",end:"20:00",cat:"food",    note:""},
-  {id:41, name:"IBRAT Academy",          start:"20:00",end:"20:20",cat:"ibrat",   note:""},
-  {id:42, name:"Tahorat (Xufton)",       start:"20:20",end:"20:27",cat:"prayer",  note:""},
-  {id:43, name:"Xufton namozi",          start:"20:27",end:"20:42",cat:"prayer",  note:""},
-  {id:44, name:"Dua / salovat (Xufton)", start:"20:42",end:"20:52",cat:"prayer",  note:""},
-  {id:45, name:"Yotishga tayyorgarlik",  start:"21:30",end:"22:00",cat:"night",   note:"Telefonni qo‘yish"},
-  {id:46, name:"Uxlash",                 start:"22:00",end:"03:45",cat:"night",   note:"Sifatli uyqu"},
+  // ── A) DARS KUNI — Dushanba / Chorshanba / Juma ──
+  {id:100,name:"Uyg‘onish → Tahorat → Bomdod namozi → dua", start:"04:05",end:"04:40",cat:"prayer", days:LESSON_DAYS,dayType:"dars_kuni",note:"Telefonni qo‘lga olma"},
+  {id:101,name:"Ingliz — yangi 15-20 so‘z yodlash",         start:"04:40",end:"05:10",cat:"english",days:LESSON_DAYS,dayType:"dars_kuni",note:"Anki / daftar"},
+  {id:102,name:"Ingliz — avvalgi so‘zlarni takrorlash",      start:"05:10",end:"05:30",cat:"english",days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:103,name:"Sport + ingliz audio tinglash",              start:"05:30",end:"06:05",cat:"sport",  days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:104,name:"Dush, tayyorgarlik",                         start:"06:05",end:"06:35",cat:"rest",   days:LESSON_DAYS,dayType:"dars_kuni",free:true,note:""},
+  {id:105,name:"Nonushta",                                   start:"06:35",end:"07:00",cat:"food",   days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:106,name:"Ingliz — Grammatika mashqi",                 start:"07:00",end:"07:40",cat:"english",days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:107,name:"Maktabga yo‘l (+ audio tinglash)",           start:"07:40",end:"08:00",cat:"rest",   days:LESSON_DAYS,dayType:"dars_kuni",free:true,note:""},
+  {id:108,name:"Maktab",                                     start:"08:00",end:"13:00",cat:"school", days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:109,name:"Yo‘l → Tahorat → Peshin namozi → dua",       start:"13:00",end:"13:35",cat:"prayer", days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:110,name:"Tushlik",                                    start:"13:35",end:"13:55",cat:"food",   days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:111,name:"RTM — 4 guruh vazifalari / o‘z ishlaring",   start:"13:55",end:"15:00",cat:"rtm",    days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:112,name:"Ingliz tili darsi (offline)",                start:"15:00",end:"17:00",cat:"english",days:LESSON_DAYS,dayType:"dars_kuni",note:"O‘qituvchi bilan"},
+  {id:113,name:"Tahorat → Asr namozi → dua",                 start:"17:00",end:"17:25",cat:"prayer", days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:114,name:"Erkin tanaffus — telefon emas",              start:"17:25",end:"17:55",cat:"rest",   days:LESSON_DAYS,dayType:"dars_kuni",free:true,note:""},
+  {id:115,name:"Ingliz — dars uy vazifasi",                  start:"17:55",end:"18:40",cat:"english",days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:116,name:"Tahorat → Shom namozi → dua",                start:"18:40",end:"19:08",cat:"prayer", days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:117,name:"Kechki ovqat",                               start:"19:08",end:"19:40",cat:"food",   days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:118,name:"IBRAT Academy",                              start:"19:40",end:"20:00",cat:"ibrat",  days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:119,name:"Tahorat → Xufton namozi → dua",              start:"20:00",end:"20:35",cat:"prayer", days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:120,name:"Ingliz — Reading (kitob)",                   start:"20:35",end:"21:05",cat:"english",days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:121,name:"O‘zbek tilida kitob o‘qish",                 start:"21:05",end:"21:30",cat:"rest",   days:LESSON_DAYS,dayType:"dars_kuni",free:true,note:""},
+  {id:122,name:"Yotishga tayyorgarlik — telefon boshqa xonaga",start:"21:30",end:"22:00",cat:"night",days:LESSON_DAYS,dayType:"dars_kuni",note:""},
+  {id:123,name:"Uxlash",                                     start:"22:00",end:"04:05",cat:"night",  days:LESSON_DAYS,dayType:"dars_kuni",note:"Sifatli uyqu"},
 
-  // ── A) DARS KUNI: Dushanba / Chorshanba / Juma ──
-  {id:100,name:"Ingliz: Grammatika",     start:"06:30",end:"07:15",cat:"english",days:LESSON_DAYS,note:""},
-  {id:101,name:"Ingliz: Yozish",         start:"07:15",end:"07:45",cat:"english",days:LESSON_DAYS,note:""},
-  {id:102,name:"RTMga yo‘l (+audio)",    start:"07:45",end:"08:15",cat:"rtm",    days:LESSON_DAYS,note:""},
-  {id:103,name:"RTM: guruh vazifalari",  start:"08:15",end:"12:20",cat:"rtm",    days:LESSON_DAYS,note:"Pomodoro yoqing"},
-  {id:104,name:"RTM davom",              start:"13:30",end:"14:45",cat:"rtm",    days:LESSON_DAYS,note:""},
-  {id:105,name:"Darsga tayyorgarlik",    start:"14:45",end:"15:00",cat:"english",days:LESSON_DAYS,note:""},
-  {id:106,name:"🇬🇧 Ingliz tili darsi (offline)",start:"15:00",end:"17:00",cat:"english",days:LESSON_DAYS,note:"O‘qituvchi bilan"},
-  {id:107,name:"Uyga yo‘l (+audio)",     start:"17:25",end:"17:45",cat:"other",  days:LESSON_DAYS,note:""},
-  {id:108,name:"Erkin tanaffus",         start:"17:45",end:"18:15",cat:"rest",   days:LESSON_DAYS,free:true,note:""},
-  {id:109,name:"Ingliz: dars uy vazifasi",start:"18:15",end:"19:00",cat:"english",days:LESSON_DAYS,note:""},
-  {id:110,name:"Ingliz: kitob o‘qish",   start:"20:52",end:"21:30",cat:"english",days:LESSON_DAYS,note:""},
+  // ── B) DARS YO‘Q KUN — Seshanba / Payshanba / Shanba ──
+  {id:200,name:"Uyg‘onish → Tahorat → Bomdod namozi → dua", start:"04:05",end:"04:40",cat:"prayer", days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:201,name:"Ingliz — yangi so‘z yodlash",                start:"04:40",end:"05:10",cat:"english",days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:202,name:"Ingliz — so‘zlarni takrorlash",              start:"05:10",end:"05:30",cat:"english",days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:203,name:"Sport + audio",                              start:"05:30",end:"06:05",cat:"sport",  days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:204,name:"Dush",                                       start:"06:05",end:"06:35",cat:"rest",   days:FREE_DAYS,dayType:"dars_yoq_kun",free:true,note:""},
+  {id:205,name:"Nonushta",                                   start:"06:35",end:"07:00",cat:"food",   days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:206,name:"Ingliz — Grammatika mashqi",                 start:"07:00",end:"07:40",cat:"english",days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:207,name:"Maktabga yo‘l (+ audio)",                    start:"07:40",end:"08:00",cat:"rest",   days:FREE_DAYS,dayType:"dars_yoq_kun",free:true,note:""},
+  {id:208,name:"Maktab",                                     start:"08:00",end:"13:00",cat:"school", days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:209,name:"Yo‘l → Tahorat → Peshin namozi → dua",       start:"13:00",end:"13:35",cat:"prayer", days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:210,name:"Tushlik",                                    start:"13:35",end:"13:55",cat:"food",   days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:211,name:"RTM — 4 guruhning ortda qolgan vazifalari",  start:"13:55",end:"15:30",cat:"rtm",    days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:212,name:"Ingliz — Speaking (shadowing)",              start:"15:30",end:"16:15",cat:"english",days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:213,name:"Ingliz — Listening (podkast)",               start:"16:15",end:"16:45",cat:"english",days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:214,name:"Tahorat → Asr namozi → dua",                 start:"16:45",end:"17:13",cat:"prayer", days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:215,name:"Erkin tanaffus",                             start:"17:13",end:"17:43",cat:"rest",   days:FREE_DAYS,dayType:"dars_yoq_kun",free:true,note:""},
+  {id:216,name:"Ingliz — film/serial",                       start:"17:43",end:"18:40",cat:"english",days:FREE_DAYS,dayType:"dars_yoq_kun",note:"Subtitr bilan"},
+  {id:217,name:"Tahorat → Shom namozi → dua",                start:"18:40",end:"19:08",cat:"prayer", days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:218,name:"Kechki ovqat",                               start:"19:08",end:"19:40",cat:"food",   days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:219,name:"IBRAT Academy",                              start:"19:40",end:"20:00",cat:"ibrat",  days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:220,name:"Tahorat → Xufton namozi → dua",              start:"20:00",end:"20:35",cat:"prayer", days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:221,name:"Ingliz — Writing mashqi",                    start:"20:35",end:"21:05",cat:"english",days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:222,name:"O‘zbek tilida kitob o‘qish",                 start:"21:05",end:"21:30",cat:"rest",   days:FREE_DAYS,dayType:"dars_yoq_kun",free:true,note:""},
+  {id:223,name:"Yotishga tayyorgarlik",                      start:"21:30",end:"22:00",cat:"night",  days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
+  {id:224,name:"Uxlash",                                     start:"22:00",end:"04:05",cat:"night",  days:FREE_DAYS,dayType:"dars_yoq_kun",note:""},
 
-  // ── B) ERKIN KUN: Seshanba / Payshanba / Shanba ──
-  {id:200,name:"IBRAT Academy",          start:"06:30",end:"07:30",cat:"ibrat",  days:FREE_DAYS,note:""},
-  {id:201,name:"Ingliz: Grammatika",     start:"07:30",end:"08:30",cat:"english",days:FREE_DAYS,note:""},
-  {id:202,name:"RTM: ortda qolgan vazifalar",start:"08:30",end:"10:00",cat:"rtm",days:FREE_DAYS,note:"4 guruh"},
-  {id:203,name:"Tanaffus",               start:"10:00",end:"10:15",cat:"rest",   days:FREE_DAYS,free:true,note:""},
-  {id:204,name:"Ingliz: Speaking",       start:"10:15",end:"11:15",cat:"english",days:FREE_DAYS,note:""},
-  {id:205,name:"Ingliz: Reading",        start:"11:15",end:"12:20",cat:"english",days:FREE_DAYS,note:""},
-  {id:206,name:"Loyiha (bot / sayt)",    start:"13:30",end:"14:30",cat:"work",   days:FREE_DAYS,note:""},
-  {id:207,name:"Ingliz: Listening",      start:"14:30",end:"15:30",cat:"english",days:FREE_DAYS,note:""},
-  {id:208,name:"Ingliz: Yozish",         start:"15:30",end:"16:30",cat:"english",days:FREE_DAYS,note:""},
-  {id:209,name:"Erkin vaqt",             start:"16:30",end:"17:00",cat:"rest",   days:FREE_DAYS,free:true,note:""},
-  {id:210,name:"Erkin tanaffus",         start:"17:25",end:"18:00",cat:"rest",   days:FREE_DAYS,free:true,note:""},
-  {id:211,name:"Ingliz: Film / serial",  start:"18:00",end:"19:00",cat:"english",days:FREE_DAYS,note:"Subtitr bilan"},
-  {id:212,name:"Erkin / oila",           start:"20:52",end:"21:30",cat:"rest",   days:FREE_DAYS,free:true,note:""},
-
-  // ── C) YAKSHANBA — yengil kun ──
-  {id:300,name:"IBRAT Academy",          start:"06:30",end:"07:30",cat:"ibrat",  days:SUNDAY,note:""},
-  {id:301,name:"Erkin / oila",           start:"07:30",end:"08:30",cat:"rest",   days:SUNDAY,free:true,note:""},
-  {id:302,name:"Ingliz: Reading",        start:"08:30",end:"09:30",cat:"english",days:SUNDAY,note:""},
-  {id:303,name:"Tanaffus",               start:"09:30",end:"09:45",cat:"rest",   days:SUNDAY,free:true,note:""},
-  {id:304,name:"Ingliz: Speaking",       start:"09:45",end:"10:45",cat:"english",days:SUNDAY,note:""},
-  {id:305,name:"Erkin vaqt",             start:"10:45",end:"12:20",cat:"rest",   days:SUNDAY,free:true,note:""},
-  {id:306,name:"Qaylula (kunduzgi uyqu)",start:"13:30",end:"14:15",cat:"night",  days:SUNDAY,note:""},
-  {id:307,name:"Ingliz: Listening",      start:"14:15",end:"15:15",cat:"english",days:SUNDAY,note:""},
-  {id:308,name:"Ingliz: Film",           start:"15:15",end:"16:15",cat:"english",days:SUNDAY,note:""},
-  {id:309,name:"Erkin / oila",           start:"16:15",end:"17:00",cat:"rest",   days:SUNDAY,free:true,note:""},
-  {id:310,name:"Erkin tanaffus",         start:"17:25",end:"18:15",cat:"rest",   days:SUNDAY,free:true,note:""},
-  {id:311,name:"Haftalik xulosa",        start:"18:15",end:"19:00",cat:"work",   days:SUNDAY,note:"Haftani tahlil qilish"},
-  {id:312,name:"Yengil reading",         start:"20:52",end:"21:30",cat:"english",days:SUNDAY,note:""},
+  // ── C) YAKSHANBA — yengil kun (maktab yo‘q) ──
+  {id:300,name:"Uyg‘onish → Tahorat → Bomdod namozi → dua", start:"04:05",end:"04:40",cat:"prayer", days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:301,name:"Ingliz — yangi so‘z (yengil)",               start:"04:40",end:"05:10",cat:"english",days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:302,name:"So‘z takrori",                               start:"05:10",end:"05:30",cat:"english",days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:303,name:"Sport",                                      start:"05:30",end:"06:00",cat:"sport",  days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:304,name:"Dush",                                       start:"06:00",end:"06:30",cat:"rest",   days:SUNDAY,dayType:"yakshanba",free:true,note:""},
+  {id:305,name:"Nonushta",                                   start:"06:30",end:"07:00",cat:"food",   days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:306,name:"IBRAT Academy",                              start:"07:00",end:"08:00",cat:"ibrat",  days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:307,name:"Ingliz — Reading",                           start:"08:00",end:"09:00",cat:"english",days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:308,name:"Tanaffus",                                   start:"09:00",end:"09:15",cat:"rest",   days:SUNDAY,dayType:"yakshanba",free:true,note:""},
+  {id:309,name:"Ingliz — Speaking",                          start:"09:15",end:"10:15",cat:"english",days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:310,name:"Erkin vaqt / loyihalar",                     start:"10:15",end:"12:20",cat:"rest",   days:SUNDAY,dayType:"yakshanba",free:true,note:""},
+  {id:311,name:"Tahorat → Peshin namozi → dua",              start:"12:20",end:"12:52",cat:"prayer", days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:312,name:"Tushlik",                                    start:"12:52",end:"13:30",cat:"food",   days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:313,name:"Qaylula",                                    start:"13:30",end:"14:15",cat:"night",  days:SUNDAY,dayType:"yakshanba",note:"Kunduzgi uyqu"},
+  {id:314,name:"Ingliz — Listening",                         start:"14:15",end:"15:15",cat:"english",days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:315,name:"Ingliz — Film",                              start:"15:15",end:"16:15",cat:"english",days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:316,name:"Erkin/oila",                                 start:"16:15",end:"16:45",cat:"rest",   days:SUNDAY,dayType:"yakshanba",free:true,note:""},
+  {id:317,name:"Tahorat → Asr namozi → dua",                 start:"16:45",end:"17:13",cat:"prayer", days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:318,name:"Erkin tanaffus",                             start:"17:13",end:"18:00",cat:"rest",   days:SUNDAY,dayType:"yakshanba",free:true,note:""},
+  {id:319,name:"Haftalik xulosa — nima o‘rgandim, keyingi hafta reja",start:"18:00",end:"18:40",cat:"english",days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:320,name:"Tahorat → Shom namozi → dua",                start:"18:40",end:"19:08",cat:"prayer", days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:321,name:"Kechki ovqat",                               start:"19:08",end:"19:40",cat:"food",   days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:322,name:"O‘zbek tilida kitob o‘qish",                 start:"19:40",end:"20:00",cat:"rest",   days:SUNDAY,dayType:"yakshanba",free:true,note:""},
+  {id:323,name:"Tahorat → Xufton namozi → dua",              start:"20:00",end:"20:35",cat:"prayer", days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:324,name:"Erkin/oila",                                 start:"20:35",end:"21:30",cat:"rest",   days:SUNDAY,dayType:"yakshanba",free:true,note:""},
+  {id:325,name:"Yotishga tayyorgarlik",                      start:"21:30",end:"22:00",cat:"night",  days:SUNDAY,dayType:"yakshanba",note:""},
+  {id:326,name:"Uxlash",                                     start:"22:00",end:"04:05",cat:"night",  days:SUNDAY,dayType:"yakshanba",note:""},
 ];
 
-const DEFP = {fajr:"04:33",dhuhr:"13:07",asr:"17:23",maghrib:"20:21",isha:"21:38"};
+
+const DEFP = {fajr:"04:20",dhuhr:"12:30",asr:"16:53",maghrib:"18:50",isha:"20:10"};
 
 // ═══════════════════════════════════════
 //  STATE
@@ -1152,12 +1167,16 @@ function persist(){
 function hydrate(){
   try{ const r=localStorage.getItem('kt5'); if(r){const p=JSON.parse(r);S=Object.assign({},S,p); window.S=S;} }catch(e){}
   if(!S.tasks||!S.tasks.length) S.tasks=DEFTASKS.map(t=>({...t,done:false,autoChecked:false,deferred:false}));
-  // Yangi reja (ingliz tili) — bir marta ko'chiriladi
+  // Yangi reja versiyasi — eski vazifalar butunlay olib tashlanadi
   if(S.planVersion!==PLAN_VERSION){
     const custom=(S.tasks||[]).filter(t=>t&&t.userAdded);
     S.tasks=DEFTASKS.map(t=>({...t,done:false,autoChecked:false,deferred:false})).concat(custom);
     S.planVersion=PLAN_VERSION;
+    S.cloudPlanVersion=null;
+    S.completions={};
+    S.dayHistory={};
   }
+
   S.tasks=dedupeTasks(S.tasks);
   S.tasks=S.tasks.map((t,i)=>({...t,order:t.order??i,autoDetectType:t.autoDetectType||'none'}));
   if(!S.activityLog) S.activityLog=[];
@@ -1206,22 +1225,31 @@ async function cleanCloudTasks(){
   const C=window.KTCloud;
   if(!C||!C.isReady||!C.isReady()||C.isViewer&&C.isViewer()) return;
   if(!C.listTaskRows||!C.deleteTaskIds) return;
-  const rows=await C.listTaskRows();
-  // Dublikat aniqlash faqat nom+boshlanish vaqti bo'yicha (tugash vaqti mos
-  // kelmagani uchun eski nusxalar qayta-qayta paydo bo'lardi).
   const sig=(n,s)=>String(n||'').trim().toLowerCase()+'|'+String(s||'').slice(0,5);
-  const keepSigs=new Set((S.tasks||[]).map(t=>sig(t.name,t.start)));
   const fresh=S.cloudPlanVersion!==PLAN_VERSION;
+  // Yangi reja versiyasi — bulutni to'liq tozalab, faqat joriy rejani yozamiz.
+  if(fresh && C.wipeTasks){
+    const n=await C.wipeTasks();
+    (S.tasks||[]).forEach(t=>{ delete t.cloudId; });
+    S.cloudPlanVersion=PLAN_VERSION;
+    S.tasks=dedupeTasks(S.tasks);
+    persist();
+    if(C.syncTasks) await C.syncTasks(S.tasks);
+    applyDayView(); renderSchedule();
+    if(n) toast('🧹 Bulutdagi '+n+' ta eski vazifa tozalandi');
+    return;
+  }
+  const rows=await C.listTaskRows();
   const keptById=new Map(); const seen=new Map(); const del=[];
   rows.forEach(r=>{
     const k=sig(r.name,r.start_time);
     if(seen.has(k)){ del.push(r.id); return; }   // dublikat
-    if(fresh && !keepSigs.has(k)){ del.push(r.id); return; } // eski rejadagi vazifa
     seen.set(k,r.id); keptById.set(k,r.id);
   });
   if(del.length){
     for(let i=0;i<del.length;i+=50) await C.deleteTaskIds(del.slice(i,i+50));
   }
+
   // Mahalliy vazifalarni bulutdagi mavjud qatorlarga bog'laymiz — aks holda
   // sinxronlash ularni yangi qator sifatida qo'shib, ikkitalik yasaydi.
   (S.tasks||[]).forEach(t=>{
