@@ -1026,11 +1026,12 @@ body.page-not-home #ktMicFab, body.page-not-home .fab { display:none !important;
 // SECURITY: no credentials or recovery codes are shipped to the browser.
 // Device authorisation is handled server-side by the QR/PIN gate
 // (see /api/public/gate/*). PIN recovery verifies the master PIN on the server.
-const PRIORITY = { prayer:10, english:9, rtm:8, medicine:8, ibrat:7, sport:6, work:5, food:4, morning:3, other:2, rest:2, night:1 };
+const PRIORITY = { prayer:10, english:9, school:9, rtm:8, medicine:8, ibrat:7, sport:6, work:5, food:4, morning:3, other:2, rest:2, night:1 };
 const CATS = {
   morning:  { l:'Ertalab',          icon:'🌅', color:'#94a3b8' },
   prayer:   { l:'Namoz',            icon:'🕌', color:'#f59e0b' },
   english:  { l:'Ingliz tili',      icon:'🇬🇧', color:'#38bdf8' },
+  school:   { l:'Maktab',           icon:'🎒', color:'#0ea5e9' },
   rtm:      { l:'RTM',              icon:'🏫', color:'#22c55e' },
   ibrat:    { l:'IBRAT Academy',    icon:'📚', color:'#a855f7' },
   work:     { l:'Ish / Loyiha',     icon:'💼', color:'#14b8a6' },
@@ -1042,7 +1043,8 @@ const CATS = {
   night:    { l:'Kechasi',          icon:'🌙', color:'#64748b' },
 };
 // Qulflangan erkin vaqt uchun majburiy kategoriyalar
-const MANDATORY_CATS = ['prayer','english','rtm','ibrat'];
+const MANDATORY_CATS = ['prayer','english','rtm','ibrat','school'];
+
 
 // ═══════════════════════════════════════
 //  DEFAULT TASKS
