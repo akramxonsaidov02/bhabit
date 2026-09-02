@@ -8,6 +8,13 @@
       "when": 1788233156725,
       "tag": "0000_create_sync_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788344604950,
+      "tag": "0001_push_geo_telegram_tables",
+      "breakpoints": true
     }
   ]
 }

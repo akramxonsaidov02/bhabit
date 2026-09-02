@@ -118,6 +118,85 @@ export type Database = {
         }
         Relationships: []
       }
+      device_inbox: {
+        Row: {
+          action: string
+          consumed: boolean
+          created_at: string
+          device_id: string | null
+          id: string
+          source: string
+          task_id: string
+        }
+        Insert: {
+          action: string
+          consumed?: boolean
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          source?: string
+          task_id: string
+        }
+        Update: {
+          action?: string
+          consumed?: boolean
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          source?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_inbox_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "app_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      device_schedules: {
+        Row: {
+          day: string
+          device_id: string
+          push_on: boolean
+          sent: Json
+          tasks: Json
+          telegram_on: boolean
+          tz_offset: number
+          updated_at: string
+        }
+        Insert: {
+          day: string
+          device_id: string
+          push_on?: boolean
+          sent?: Json
+          tasks?: Json
+          telegram_on?: boolean
+          tz_offset?: number
+          updated_at?: string
+        }
+        Update: {
+          day?: string
+          device_id?: string
+          push_on?: boolean
+          sent?: Json
+          tasks?: Json
+          telegram_on?: boolean
+          tz_offset?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_schedules_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: true
+            referencedRelation: "app_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devices: {
         Row: {
           created_at: string
@@ -148,6 +227,41 @@ export type Database = {
         }
         Relationships: []
       }
+      location_events: {
+        Row: {
+          arrived_at: string
+          device_id: string
+          id: string
+          lat: number | null
+          lng: number | null
+          place: string
+        }
+        Insert: {
+          arrived_at?: string
+          device_id: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          place: string
+        }
+        Update: {
+          arrived_at?: string
+          device_id?: string
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          place?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_events_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "app_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -165,6 +279,44 @@ export type Database = {
           master_device_id?: string | null
         }
         Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          device_id: string
+          endpoint: string
+          id: string
+          last_used: string | null
+          p256dh: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          device_id: string
+          endpoint: string
+          id?: string
+          last_used?: string | null
+          p256dh: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          device_id?: string
+          endpoint?: string
+          id?: string
+          last_used?: string | null
+          p256dh?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "app_devices"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       task_completions: {
         Row: {
@@ -243,6 +395,33 @@ export type Database = {
           sort_order?: number
           start_time?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      telegram_state: {
+        Row: {
+          asked_at: string | null
+          chat_id: string
+          last_device_id: string | null
+          last_task_id: string | null
+          last_task_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          asked_at?: string | null
+          chat_id: string
+          last_device_id?: string | null
+          last_task_id?: string | null
+          last_task_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asked_at?: string | null
+          chat_id?: string
+          last_device_id?: string | null
+          last_task_id?: string | null
+          last_task_name?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
