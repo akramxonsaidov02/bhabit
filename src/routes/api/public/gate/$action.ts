@@ -36,11 +36,187 @@ async function handle(request: Request, action: string, method: string): Promise
     if (action === "change-pin" && method === "POST") return await changePin(request);
     if (action === "check-master-pin" && method === "POST") return await checkMasterPin(request);
     if (action === "sync-config" && method === "GET") return await syncConfig(request);
+    // ── Push / GPS / Telegram inbox (all require a valid, non-viewer device token) ──
+    if (action === "push-config" && method === "GET") return await pushConfig(request);
+    if (action === "push-subscribe" && method === "POST") return await pushSubscribe(request);
+    if (action === "push-test" && method === "POST") return await pushTest(request);
+    if (action === "schedule-sync" && method === "POST") return await scheduleSync(request);
+    if (action === "location-event" && method === "POST") return await locationEvent(request);
+    if (action === "location-events" && method === "GET") return await locationEvents(request);
+    if (action === "inbox" && method === "GET") return await inbox(request);
     return json({ error: "not_found" }, 404);
   } catch (err) {
     console.error("[gate]", action, err);
     return json({ error: "server_error" }, 500);
   }
+}
+
+async function requireWriter(request: Request) {
+  const device = await findDeviceByToken(extractToken(request));
+  if (!device || device.role === "viewer") return null;
+  return device;
+}
+
+async function readJson<T>(request: Request): Promise<T | null> {
+  try {
+    return (await request.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function pushConfig(request: Request) {
+  const device = await requireWriter(request);
+  if (!device) return json({ error: "forbidden" }, 403);
+  const { vapidConfigured, telegramConfigured } = await import("@/lib/notify.server");
+  return json({
+    publicKey: process.env["VAPID_PUBLIC_KEY"] || null,
+    pushReady: vapidConfigured(),
+    telegramReady: telegramConfigured(),
+  });
+}
+
+async function pushSubscribe(request: Request) {
+  const device = await requireWriter(request);
+  if (!device) return json({ error: "forbidden" }, 403);
+  const body = await readJson<{ subscription?: { endpoint?: string; keys?: { p256dh?: string; auth?: string } } }>(request);
+  const sub = body?.subscription;
+  if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys?.auth || !/^https:\/\//.test(sub.endpoint)) {
+    return json({ error: "bad_request" }, 400);
+  }
+  const db = await getAdmin();
+  const { error } = await db.from("push_subscriptions").upsert(
+    { device_id: device.id, endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth },
+    { onConflict: "endpoint" },
+  );
+  if (error) return json({ error: "server_error" }, 500);
+  return json({ ok: true });
+}
+
+async function pushTest(request: Request) {
+  const device = await requireWriter(request);
+  if (!device) return json({ error: "forbidden" }, 403);
+  const { pushToDevice } = await import("@/lib/notify.server");
+  const n = await pushToDevice(device.id, {
+    title: "✅ Push ishlayapti",
+    body: "Ilova yopiq bo‘lsa ham eslatmalar keladi.",
+    tag: "test",
+    kind: "test",
+  });
+  return json({ ok: n > 0, sent: n });
+}
+
+// Client uploads today's task list so the server can send reminders while the app is closed.
+async function scheduleSync(request: Request) {
+  const device = await requireWriter(request);
+  if (!device) return json({ error: "forbidden" }, 403);
+  const body = await readJson<{
+    day?: string;
+    tzOffset?: number;
+    tasks?: unknown[];
+    telegramOn?: boolean;
+    pushOn?: boolean;
+  }>(request);
+  if (!body || !/^\d{4}-\d{2}-\d{2}$/.test(String(body.day || ""))) return json({ error: "bad_request" }, 400);
+  const tasks = (Array.isArray(body.tasks) ? body.tasks : [])
+    .slice(0, 200)
+    .map((t) => {
+      const x = (t || {}) as Record<string, unknown>;
+      return {
+        id: String(x["id"] ?? "").slice(0, 64),
+        name: String(x["name"] ?? "").slice(0, 120),
+        start: typeof x["start"] === "string" ? x["start"] : undefined,
+        end: typeof x["end"] === "string" ? x["end"] : undefined,
+        cat: typeof x["cat"] === "string" ? x["cat"] : undefined,
+        done: !!x["done"],
+      };
+    })
+    .filter((t) => t.id && t.name);
+  const db = await getAdmin();
+  const { data: existing } = await db.from("device_schedules").select("day, sent").eq("device_id", device.id).maybeSingle();
+  const sameDay = existing && String(existing.day) === body.day;
+  const { error } = await db.from("device_schedules").upsert({
+    device_id: device.id,
+    day: body.day,
+    tz_offset: Number.isFinite(Number(body.tzOffset)) ? Number(body.tzOffset) : 300,
+    tasks,
+    sent: sameDay ? existing!.sent : {},
+    telegram_on: body.telegramOn !== false,
+    push_on: body.pushOn !== false,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return json({ error: "server_error" }, 500);
+  return json({ ok: true, count: tasks.length });
+}
+
+async function locationEvent(request: Request) {
+  const device = await requireWriter(request);
+  if (!device) return json({ error: "forbidden" }, 403);
+  const body = await readJson<{ place?: string; lat?: number; lng?: number }>(request);
+  const place = String(body?.place || "").trim().slice(0, 40);
+  if (!place) return json({ error: "bad_request" }, 400);
+  const db = await getAdmin();
+  // avoid duplicate arrivals within 30 minutes
+  const since = new Date(Date.now() - 30 * 60000).toISOString();
+  const { data: recent } = await db
+    .from("location_events")
+    .select("id")
+    .eq("device_id", device.id)
+    .eq("place", place)
+    .gte("arrived_at", since)
+    .limit(1);
+  if (recent && recent.length) return json({ ok: true, duplicate: true });
+  const { error } = await db.from("location_events").insert({
+    device_id: device.id,
+    place,
+    lat: typeof body?.lat === "number" ? body.lat : null,
+    lng: typeof body?.lng === "number" ? body.lng : null,
+  });
+  if (error) return json({ error: "server_error" }, 500);
+  const { telegramConfigured, sendTelegram } = await import("@/lib/notify.server");
+  if (telegramConfigured()) {
+    const hhmm = new Date(Date.now() + 5 * 3600000).toISOString().slice(11, 16);
+    sendTelegram(`📍 ${hhmm} — ${place} manziliga yetib keldi.`).catch(() => {});
+  }
+  return json({ ok: true });
+}
+
+async function locationEvents(request: Request) {
+  const device = await requireWriter(request);
+  if (!device) return json({ error: "forbidden" }, 403);
+  const db = await getAdmin();
+  const { data } = await db
+    .from("location_events")
+    .select("place, arrived_at")
+    .eq("device_id", device.id)
+    .order("arrived_at", { ascending: false })
+    .limit(30);
+  return json({ events: data || [] });
+}
+
+// Actions that arrived from Telegram while the app was closed. Returned once, then marked consumed.
+async function inbox(request: Request) {
+  const device = await requireWriter(request);
+  if (!device) return json({ error: "forbidden" }, 403);
+  const db = await getAdmin();
+  const { data } = await db
+    .from("device_inbox")
+    .select("id, task_id, action, source, created_at")
+    .eq("device_id", device.id)
+    .eq("consumed", false)
+    .order("created_at", { ascending: true })
+    .limit(50);
+  const items = data || [];
+  if (items.length) {
+    await db
+      .from("device_inbox")
+      .update({ consumed: true })
+      .in(
+        "id",
+        items.map((i) => i.id),
+      );
+  }
+  return json({ items });
 }
 
 async function status(request: Request) {
