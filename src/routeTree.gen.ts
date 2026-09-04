@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVoiceTranscribeRouteImport } from './routes/api/voice-transcribe'
 import { Route as ApiAiPlanRouteImport } from './routes/api/ai-plan'
 import { Route as ApiPublicReportTelegramRouteImport } from './routes/api/public/report/telegram'
+import { Route as ApiPublicHooksTickRouteImport } from './routes/api/public/hooks/tick'
 import { Route as ApiPublicGateActionRouteImport } from './routes/api/public/gate/$action'
 
 const AdminRoute = AdminRouteImport.update({
@@ -41,6 +42,11 @@ const ApiPublicReportTelegramRoute = ApiPublicReportTelegramRouteImport.update({
   path: '/api/public/report/telegram',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksTickRoute = ApiPublicHooksTickRouteImport.update({
+  id: '/api/public/hooks/tick',
+  path: '/api/public/hooks/tick',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicGateActionRoute = ApiPublicGateActionRouteImport.update({
   id: '/api/public/gate/$action',
   path: '/api/public/gate/$action',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/api/ai-plan': typeof ApiAiPlanRoute
   '/api/voice-transcribe': typeof ApiVoiceTranscribeRoute
   '/api/public/gate/$action': typeof ApiPublicGateActionRoute
+  '/api/public/hooks/tick': typeof ApiPublicHooksTickRoute
   '/api/public/report/telegram': typeof ApiPublicReportTelegramRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/api/ai-plan': typeof ApiAiPlanRoute
   '/api/voice-transcribe': typeof ApiVoiceTranscribeRoute
   '/api/public/gate/$action': typeof ApiPublicGateActionRoute
+  '/api/public/hooks/tick': typeof ApiPublicHooksTickRoute
   '/api/public/report/telegram': typeof ApiPublicReportTelegramRoute
 }
 export interface FileRoutesById {
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/api/ai-plan': typeof ApiAiPlanRoute
   '/api/voice-transcribe': typeof ApiVoiceTranscribeRoute
   '/api/public/gate/$action': typeof ApiPublicGateActionRoute
+  '/api/public/hooks/tick': typeof ApiPublicHooksTickRoute
   '/api/public/report/telegram': typeof ApiPublicReportTelegramRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +89,7 @@ export interface FileRouteTypes {
     | '/api/ai-plan'
     | '/api/voice-transcribe'
     | '/api/public/gate/$action'
+    | '/api/public/hooks/tick'
     | '/api/public/report/telegram'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/api/ai-plan'
     | '/api/voice-transcribe'
     | '/api/public/gate/$action'
+    | '/api/public/hooks/tick'
     | '/api/public/report/telegram'
   id:
     | '__root__'
@@ -96,6 +107,7 @@ export interface FileRouteTypes {
     | '/api/ai-plan'
     | '/api/voice-transcribe'
     | '/api/public/gate/$action'
+    | '/api/public/hooks/tick'
     | '/api/public/report/telegram'
   fileRoutesById: FileRoutesById
 }
@@ -105,6 +117,7 @@ export interface RootRouteChildren {
   ApiAiPlanRoute: typeof ApiAiPlanRoute
   ApiVoiceTranscribeRoute: typeof ApiVoiceTranscribeRoute
   ApiPublicGateActionRoute: typeof ApiPublicGateActionRoute
+  ApiPublicHooksTickRoute: typeof ApiPublicHooksTickRoute
   ApiPublicReportTelegramRoute: typeof ApiPublicReportTelegramRoute
 }
 
@@ -145,6 +158,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicReportTelegramRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/tick': {
+      id: '/api/public/hooks/tick'
+      path: '/api/public/hooks/tick'
+      fullPath: '/api/public/hooks/tick'
+      preLoaderRoute: typeof ApiPublicHooksTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/gate/$action': {
       id: '/api/public/gate/$action'
       path: '/api/public/gate/$action'
@@ -161,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiPlanRoute: ApiAiPlanRoute,
   ApiVoiceTranscribeRoute: ApiVoiceTranscribeRoute,
   ApiPublicGateActionRoute: ApiPublicGateActionRoute,
+  ApiPublicHooksTickRoute: ApiPublicHooksTickRoute,
   ApiPublicReportTelegramRoute: ApiPublicReportTelegramRoute,
 }
 export const routeTree = rootRouteImport
