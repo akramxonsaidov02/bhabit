@@ -60,6 +60,26 @@ self.addEventListener('message', (event) => {
   }
 });
 
+// Server-sent Web Push (works while the app is closed)
+self.addEventListener('push', (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch (e) { d = { title: event.data && event.data.text() }; }
+  const isCheck = d.kind === 'check';
+  const actions = isCheck
+    ? [{ action: 'done', title: '✅ Bajarildi' }, { action: 'snooze', title: '⏱ 10 daq' }]
+    : (d.kind === 'test' ? [] : [{ action: 'done', title: '✅ Bajarildi' }]);
+  event.waitUntil(self.registration.showNotification(d.title || 'Kun Tartibim', {
+    body: d.body || '',
+    tag: d.tag || 'kt-push',
+    icon: '/favicon.ico',
+    badge: '/favicon.ico',
+    data: { taskId: d.taskId, isCheck },
+    actions,
+    renotify: true,
+    vibrate: [200, 100, 200],
+  }));
+});
+
 self.addEventListener('notificationclick', (event) => {
   const { action, notification } = event;
   const data = notification.data || {};
