@@ -41,7 +41,8 @@ export const Route = createFileRoute("/api/public/report/telegram")({
         } catch {
           return json({ error: "Noto'g'ri so'rov" }, 400);
         }
-        const chatId = String(body.chatId || "").trim();
+        // Falls back to the owner's configured chat so the UI needs no Chat ID field.
+        const chatId = String(body.chatId || process.env["TELEGRAM_CHAT_ID"] || "").trim();
         if (!/^-?\d{3,20}$/.test(chatId)) return json({ error: "Chat ID noto'g'ri" }, 400);
 
         const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
