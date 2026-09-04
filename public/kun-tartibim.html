@@ -13,6 +13,8 @@
 <script src="/kt-cloud.js" defer></script>
 <script src="/kt-extras.js" defer></script>
 <script src="/kt-focus.js" defer></script>
+<script src="/kt-push.js" defer></script>
+<script src="/kt-geo.js" defer></script>
 <style>
 /* ═══════════════════════════════════════
    CSS VARIABLES
@@ -2908,6 +2910,20 @@ function renderSettings(){
       <details style="margin-top:8px"><summary style="cursor:pointer;color:var(--tx2);font-size:12px">Har vazifa uchun alohida</summary>
         <div style="max-height:200px;overflow:auto;margin-top:6px">${notifTasks}</div>
       </details>
+    </div>
+
+    <div class="st-sec"><h4>☁️ Server eslatmalari (ilova yopiq bo‘lsa ham)</h4>
+      <div class="st-row"><span><b>Push (server orqali)</b><br><small style="color:var(--tx3);font-weight:400">5 daq oldin, boshlanganda va tugaganda «bajardingizmi?»</small></span>
+        <input type="checkbox" ${S.pushOn?'checked':''} onchange="this.checked?KTPush.enable().then(ok=>{if(!ok)this.checked=false}):KTPush.disable()">
+      </div>
+      <div class="st-row"><span><b>Telegram savollari</b><br><small style="color:var(--tx3);font-weight:400">Vazifa tugaganda botdan «✅ Ha / ❌ Yo‘q» tugmali xabar</small></span>
+        <input type="checkbox" ${S.telegramOn?'checked':''} onchange="S.telegramOn=this.checked;persist();try{KTPush.syncSchedule(true)}catch(e){}">
+      </div>
+      <div class="st-btns"><button onclick="KTPush.test()">📨 Test push</button><button onclick="try{KTPush.syncSchedule(true);toast('Jadval serverga yuborildi')}catch(e){}">🔄 Jadvalni yuborish</button></div>
+    </div>
+
+    <div class="st-sec"><h4>📍 GPS joylar</h4>
+      ${window.KTGeo?KTGeo.settingsHtml():'<small style="color:var(--tx3)">Yuklanmoqda…</small>'}
     </div>
 
     <div class="st-sec"><h4>\ud83d\udcca Ma\u2019lumot</h4>
