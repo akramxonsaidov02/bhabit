@@ -74,7 +74,11 @@
       const S = window.S;
       const day = typeof todayKey === "function" ? todayKey() : new Date().toISOString().slice(0, 10);
       const tasks = (S.tasks || []).map((t) => ({ id: String(t.id), name: t.name, start: t.start, end: t.end, cat: t.cat, done: !!t.done }));
-      const body = { day, tzOffset: -new Date().getTimezoneOffset(), tasks, telegramOn: !!S.telegramOn, pushOn: !!S.pushOn };
+      const body = {
+        day, tzOffset: -new Date().getTimezoneOffset(), tasks,
+        telegramOn: !!S.telegramOn, pushOn: !!S.pushOn,
+        dayStart: S.dayStart || "06:30", sleepTime: S.sleepTime || "22:30",
+      };
       const sig = JSON.stringify(body);
       if (!force && sig === lastSig) return;
       const r = await call("schedule-sync", { method: "POST", body: sig });
@@ -82,7 +86,7 @@
     }, force ? 50 : 1500);
   }
 
-  // Actions that arrived from Telegram while the app was closed.
+  // Actions that arrived from Telegram / GPS while the app was closed.
   async function pollInbox() {
     if (disabled || !tok() || document.hidden) return;
     const r = await call("inbox");
@@ -91,7 +95,10 @@
       if (it.action === "done" && typeof markTaskDone === "function") {
         const S = window.S;
         const t = (S.tasks || []).find((x) => String(x.id) === String(it.task_id));
-        if (t && !t.done) { markTaskDone(t.id); }
+        if (t && !t.done) {
+          markTaskDone(t.id);
+          toast((it.source === "gps" ? "📍 GPS" : "✈️ Telegram") + " orqali: «" + t.name + "» ✅");
+        }
       }
     });
   }
