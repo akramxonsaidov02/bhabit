@@ -159,9 +159,11 @@ export type Database = {
       device_schedules: {
         Row: {
           day: string
+          day_start: string
           device_id: string
           push_on: boolean
           sent: Json
+          sleep_time: string
           tasks: Json
           telegram_on: boolean
           tz_offset: number
@@ -169,9 +171,11 @@ export type Database = {
         }
         Insert: {
           day: string
+          day_start?: string
           device_id: string
           push_on?: boolean
           sent?: Json
+          sleep_time?: string
           tasks?: Json
           telegram_on?: boolean
           tz_offset?: number
@@ -179,9 +183,11 @@ export type Database = {
         }
         Update: {
           day?: string
+          day_start?: string
           device_id?: string
           push_on?: boolean
           sent?: Json
+          sleep_time?: string
           tasks?: Json
           telegram_on?: boolean
           tz_offset?: number
@@ -235,6 +241,8 @@ export type Database = {
           lat: number | null
           lng: number | null
           place: string
+          task_id: string | null
+          task_name: string | null
         }
         Insert: {
           arrived_at?: string
@@ -243,6 +251,8 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           place: string
+          task_id?: string | null
+          task_name?: string | null
         }
         Update: {
           arrived_at?: string
@@ -251,6 +261,8 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           place?: string
+          task_id?: string | null
+          task_name?: string | null
         }
         Relationships: [
           {

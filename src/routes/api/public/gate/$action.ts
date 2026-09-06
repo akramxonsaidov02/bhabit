@@ -116,8 +116,11 @@ async function scheduleSync(request: Request) {
     tasks?: unknown[];
     telegramOn?: boolean;
     pushOn?: boolean;
+    dayStart?: string;
+    sleepTime?: string;
   }>(request);
   if (!body || !/^\d{4}-\d{2}-\d{2}$/.test(String(body.day || ""))) return json({ error: "bad_request" }, 400);
+  const hhmm = (v: unknown, d: string) => (typeof v === "string" && /^\d{1,2}:\d{2}$/.test(v) ? v : d);
   const tasks = (Array.isArray(body.tasks) ? body.tasks : [])
     .slice(0, 200)
     .map((t) => {
@@ -143,6 +146,8 @@ async function scheduleSync(request: Request) {
     sent: sameDay ? existing!.sent : {},
     telegram_on: body.telegramOn !== false,
     push_on: body.pushOn !== false,
+    day_start: hhmm(body.dayStart, "06:30"),
+    sleep_time: hhmm(body.sleepTime, "22:30"),
     updated_at: new Date().toISOString(),
   });
   if (error) return json({ error: "server_error" }, 500);
@@ -166,19 +171,52 @@ async function locationEvent(request: Request) {
     .gte("arrived_at", since)
     .limit(1);
   if (recent && recent.length) return json({ ok: true, duplicate: true });
+
+  // Auto-mark the task the user arrived for (e.g. "RTM" → English lesson).
+  const { telegramConfigured, sendTelegram, findArrivalTask, localNow, pushToDevice } = await import("@/lib/notify.server");
+  const { data: sched } = await db.from("device_schedules").select("*").eq("device_id", device.id).maybeSingle();
+  let autoTask: { id: string; name: string } | null = null;
+  if (sched) {
+    const tz = Number(sched.tz_offset ?? 300);
+    const now = localNow(tz);
+    if (String(sched.day) === now.date) {
+      const tasks = (Array.isArray(sched.tasks) ? sched.tasks : []) as import("@/lib/notify.server").SchedTask[];
+      const hit = findArrivalTask(tasks, place, now.dayMin);
+      if (hit) {
+        hit.done = true;
+        autoTask = { id: hit.id, name: hit.name };
+        await db.from("device_schedules").update({ tasks }).eq("device_id", device.id);
+        await db.from("device_inbox").insert({ device_id: device.id, task_id: hit.id, action: "done", source: "gps" });
+      }
+    }
+  }
+
   const { error } = await db.from("location_events").insert({
     device_id: device.id,
     place,
     lat: typeof body?.lat === "number" ? body.lat : null,
     lng: typeof body?.lng === "number" ? body.lng : null,
+    task_id: autoTask?.id ?? null,
+    task_name: autoTask?.name ?? null,
   });
   if (error) return json({ error: "server_error" }, 500);
-  const { telegramConfigured, sendTelegram } = await import("@/lib/notify.server");
+
+  const hhmm = new Date(Date.now() + 5 * 3600000).toISOString().slice(11, 16);
   if (telegramConfigured()) {
-    const hhmm = new Date(Date.now() + 5 * 3600000).toISOString().slice(11, 16);
-    sendTelegram(`📍 ${hhmm} — ${place} manziliga yetib keldi.`).catch(() => {});
+    sendTelegram(
+      `📍 ${hhmm} — ${place} manziliga yetib keldi.` + (autoTask ? `\n✅ "${autoTask.name}" avtomatik bajarildi deb belgilandi.` : ""),
+    ).catch(() => {});
   }
-  return json({ ok: true });
+  if (autoTask && sched?.push_on) {
+    pushToDevice(device.id, {
+      title: "📍 " + place + " — yetib keldingiz",
+      body: `✅ "${autoTask.name}" avtomatik belgilandi`,
+      tag: "arrive-" + autoTask.id,
+      taskId: autoTask.id,
+      kind: "arrive",
+    }).catch(() => {});
+  }
+  return json({ ok: true, autoDone: autoTask });
 }
 
 async function locationEvents(request: Request) {

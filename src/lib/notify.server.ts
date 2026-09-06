@@ -105,6 +105,67 @@ export async function telegramApi(method: string, body: Record<string, unknown>)
   }
 }
 
+// Place → task matching (GPS arrival). "RTM" matches tasks whose name/category mention RTM/ingliz,
+// "Maktab" matches school tasks, any other place matches by name.
+const PLACE_WORDS: Record<string, string[]> = {
+  rtm: ["rtm", "ingliz", "english", "kurs"],
+  maktab: ["maktab", "school", "dars"],
+  uy: ["uy", "home", "uyga"],
+};
+export function taskMatchesPlace(t: SchedTask, place: string) {
+  const p = place.trim().toLowerCase();
+  const words = PLACE_WORDS[p] || [p];
+  const hay = `${t.name} ${t.cat || ""}`.toLowerCase();
+  return words.some((w) => hay.includes(w));
+}
+
+export function localNow(tz: number) {
+  const localMin = Math.floor(Date.now() / 60000) + tz;
+  return { dayMin: ((localMin % 1440) + 1440) % 1440, date: new Date(localMin * 60000).toISOString().slice(0, 10) };
+}
+
+// Find the task the user most likely arrived for: matching place, not done, starting within −90…+120 min.
+export function findArrivalTask(tasks: SchedTask[], place: string, dayMin: number): SchedTask | null {
+  let best: SchedTask | null = null;
+  let bestDist = Infinity;
+  for (const t of tasks) {
+    if (!t || t.done || !taskMatchesPlace(t, place)) continue;
+    const s = t2m(t.start);
+    const e = t2m(t.end);
+    if (s === null) continue;
+    const diff = dayMin - s; // >0 → started already
+    if (diff < -120 || diff > Math.max(90, (e ?? s) - s + 30)) continue;
+    const d = Math.abs(diff);
+    if (d < bestDist) {
+      best = t;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
+// Marks a task done/undone inside the device's mirrored schedule so the tick stops reminding.
+export async function markTaskInSchedule(deviceId: string, taskId: string, done: boolean) {
+  const db = await getAdmin();
+  const { data: row } = await db.from("device_schedules").select("tasks").eq("device_id", deviceId).maybeSingle();
+  if (!row) return;
+  const tasks = (Array.isArray(row.tasks) ? row.tasks : []) as SchedTask[];
+  let hit = false;
+  for (const t of tasks) if (t && String(t.id) === String(taskId)) (t.done = done), (hit = true);
+  if (hit) await db.from("device_schedules").update({ tasks }).eq("device_id", deviceId);
+}
+
+export function formatTaskList(tasks: SchedTask[], dayMin?: number) {
+  const sorted = [...tasks].sort((a, b) => (t2m(a.start) ?? 0) - (t2m(b.start) ?? 0));
+  return sorted
+    .map((t) => {
+      const s = t2m(t.start);
+      const cur = dayMin !== undefined && s !== null && (t2m(t.end) ?? s + 1) > dayMin && s <= dayMin;
+      return `${t.done ? "✅" : cur ? "▶️" : "⬜"} ${t.start || "--:--"} ${t.name}`;
+    })
+    .join("\n");
+}
+
 // Called every minute by pg_cron. Decides which reminders are due and sends them.
 export async function runTick(): Promise<{ checked: number; pushes: number; telegram: number }> {
   const db = await getAdmin();
@@ -124,6 +185,32 @@ export async function runTick(): Promise<{ checked: number; pushes: number; tele
     const tasks = (Array.isArray(row.tasks) ? row.tasks : []) as SchedTask[];
     const sent = { ...((row.sent as Record<string, number>) || {}) };
     let changed = false;
+
+    // Morning briefing at day start, evening summary at sleep time (Telegram only).
+    if (row.telegram_on && telegramConfigured() && tasks.length) {
+      const ds = t2m(String(row.day_start || "06:30")) ?? 390;
+      const st = t2m(String(row.sleep_time || "22:30")) ?? 1350;
+      if (!sent["brief"] && localDayMin >= ds && localDayMin <= ds + 3) {
+        sent["brief"] = Date.now();
+        changed = true;
+        const ok = await sendTelegram(
+          `☀️ Xayrli tong! Bugungi reja (${tasks.length} ta):\n\n${formatTaskList(tasks)}\n\nOmad! /bugun — holatni ko‘rish`,
+        );
+        if (ok) telegram++;
+      }
+      if (!sent["evening"] && localDayMin >= st && localDayMin <= st + 3) {
+        sent["evening"] = Date.now();
+        changed = true;
+        const done = tasks.filter((t) => t.done).length;
+        const pct = Math.round((done / tasks.length) * 100);
+        const left = tasks.filter((t) => !t.done).map((t) => "• " + t.name);
+        const ok = await sendTelegram(
+          `🌙 Kun yakuni: ${done}/${tasks.length} (${pct}%)` +
+            (pct === 100 ? "\n\n🏆 Ajoyib — hammasi bajarildi!" : left.length ? "\n\nQolganlar:\n" + left.slice(0, 10).join("\n") : ""),
+        );
+        if (ok) telegram++;
+      }
+    }
 
     for (const t of tasks) {
       if (!t || !t.id || t.done) continue;
