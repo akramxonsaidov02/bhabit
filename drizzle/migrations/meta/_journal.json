@@ -15,6 +15,13 @@
       "when": 1788344604950,
       "tag": "0001_push_geo_telegram_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788674825162,
+      "tag": "0002_device_schedules_day_bounds",
+      "breakpoints": true
     }
   ]
 }
