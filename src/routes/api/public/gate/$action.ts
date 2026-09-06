@@ -116,8 +116,11 @@ async function scheduleSync(request: Request) {
     tasks?: unknown[];
     telegramOn?: boolean;
     pushOn?: boolean;
+    dayStart?: string;
+    sleepTime?: string;
   }>(request);
   if (!body || !/^\d{4}-\d{2}-\d{2}$/.test(String(body.day || ""))) return json({ error: "bad_request" }, 400);
+  const hhmm = (v: unknown, d: string) => (typeof v === "string" && /^\d{1,2}:\d{2}$/.test(v) ? v : d);
   const tasks = (Array.isArray(body.tasks) ? body.tasks : [])
     .slice(0, 200)
     .map((t) => {
