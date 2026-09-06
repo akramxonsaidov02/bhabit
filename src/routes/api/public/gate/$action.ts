@@ -146,6 +146,8 @@ async function scheduleSync(request: Request) {
     sent: sameDay ? existing!.sent : {},
     telegram_on: body.telegramOn !== false,
     push_on: body.pushOn !== false,
+    day_start: hhmm(body.dayStart, "06:30"),
+    sleep_time: hhmm(body.sleepTime, "22:30"),
     updated_at: new Date().toISOString(),
   });
   if (error) return json({ error: "server_error" }, 500);
