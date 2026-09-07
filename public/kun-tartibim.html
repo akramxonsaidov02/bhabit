@@ -883,6 +883,10 @@ body.page-not-home #ktMicFab, body.page-not-home .fab { display:none !important;
       </select>
     </div>
     <div class="frow"><label>Izoh</label><input class="fi" id="fNote" placeholder="Ixtiyoriy..."></div>
+    <div class="frow" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <label style="margin:0">Faqat shu kunga<br><small style="color:var(--tx3);font-weight:400">Doimiy jadvalga ta'sir qilmaydi</small></label>
+      <input type="checkbox" id="fOnlyDay">
+    </div>
     <div class="btn-row">
       <button class="bc" onclick="closeOv('ovTask')">Bekor</button>
       <button class="bd" id="fDel" onclick="delTask()" style="display:none">🗑</button>
@@ -1291,7 +1295,7 @@ function activeDate(){ return S.selectedDate||todayKey(); }
 function isToday(){ return activeDate()===todayKey(); }
 // Vazifa shu kunga tegishlimi? (days bo'lmasa — har kuni)
 function dowOf(date){ const p=String(date||'').split('-'); return p.length===3 ? new Date(+p[0],+p[1]-1,+p[2]).getDay() : new Date().getDay(); }
-function taskOnDay(t,date){ return !t || !Array.isArray(t.days) || !t.days.length || t.days.indexOf(dowOf(date||activeDate()))>=0; }
+function taskOnDay(t,date){ if(!t) return true; const d=date||activeDate(); if(t.onlyDate) return t.onlyDate===d; return !Array.isArray(t.days) || !t.days.length || t.days.indexOf(dowOf(d))>=0; }
 function visibleTasks(){ return (S.tasks||[]).filter(t=>taskOnDay(t,activeDate())); }
 function dayMap(date){
   if(!S.completions) S.completions={};
@@ -1842,6 +1846,7 @@ function openAdd(){
   ['fStart','fEnd'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('fCat').value='other';
   const detect=document.getElementById('fDetect'); if(detect) detect.value='none';
+  const od=document.getElementById('fOnlyDay'); if(od) od.checked=false;
   document.getElementById('fDel').style.display='none';
   document.getElementById('fDefer').style.display='none';
   document.getElementById('aiSug').classList.remove('show');
@@ -1857,6 +1862,7 @@ function openEdit(id){
   document.getElementById('fCat').value=t.cat||'other';
   document.getElementById('fNote').value=t.note||'';
   const detect=document.getElementById('fDetect'); if(detect) detect.value=t.autoDetectType||'none';
+  const od=document.getElementById('fOnlyDay'); if(od) od.checked=!!t.onlyDate;
   document.getElementById('fDel').style.display='inline-flex';
   document.getElementById('fDefer').style.display='inline-flex';
   document.getElementById('aiSug').classList.remove('show');
@@ -1961,11 +1967,14 @@ function saveTask(){
   const newCat=document.getElementById('fCat').value;
   const newNote=document.getElementById('fNote').value;
   const newDetect=document.getElementById('fDetect')?.value||'none';
+  const onlyDay=!!document.getElementById('fOnlyDay')?.checked;
+  const onlyDate=onlyDay?activeDate():null;
   if(editId){
     const t=taskById(editId);
     if(!t) return;
     const oldStart=t.start, oldEnd=t.end;
     t.name=name; t.start=newStart; t.end=newEnd; t.cat=newCat; t.note=newNote; t.autoDetectType=newDetect;
+    if(onlyDate) t.onlyDate=onlyDate; else delete t.onlyDate;
     persist(); closeOv('ovTask'); renderSchedule();
     if(window.KTCloud&&window.KTCloud.isReady()) window.KTCloud.pushTaskChange(t);
     toast('✏️ Yangilandi');
@@ -1988,6 +1997,7 @@ function saveTask(){
   } else {
     const nt={id:Date.now(),name,userAdded:true,done:false,autoChecked:false,deferred:false,
       start:newStart,end:newEnd,cat:newCat,note:newNote,autoDetectType:newDetect,priority:newCat==='work'?'orta':'past'};
+    if(onlyDate) nt.onlyDate=onlyDate;
     const conflicts=findConflicts(null,newStart,newEnd);
     if(conflicts.length>0 && (newCat==='work'||newCat==='medicine'||newCat==='prayer')){
       splitConflictsForImportant(nt,conflicts);
@@ -3131,7 +3141,8 @@ async function aiReplan(){
       headers:{'Content-Type':'application/json','x-device-token':localStorage.getItem('bh_device_token')||''},
       body:JSON.stringify({
         mode:'replan',
-        tasks:S.tasks,
+        tasks:visibleTasks().map(t=>({id:t.id,name:t.name,cat:t.cat,start:t.start,end:t.end,done:!!t.done,free:!!t.free,priority:t.priority||'orta'})),
+        now:new Date().toTimeString().slice(0,5),
         prayers:S.prayers,
         dayStart:S.dayStart||'06:30',
         sleep:S.sleepTime||'22:30'
@@ -3435,6 +3446,12 @@ function maybeAutoCompleteMotion(){ const t=S.tasks.find(x=>!x.done&&x.autoDetec
 .st-swatches{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .st-sw{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
 .st-sw.on{border-color:var(--tx)}
+.st-row input[type=checkbox],.frow input[type=checkbox]{appearance:none;-webkit-appearance:none;width:46px;height:27px;border-radius:999px;background:var(--glass-bg2);border:1px solid var(--bdr2);position:relative;cursor:pointer;flex:0 0 auto;transition:background .18s,border-color .18s}
+.st-row input[type=checkbox]::after,.frow input[type=checkbox]::after{content:'';position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:var(--tx2);transition:transform .18s,background .18s}
+.st-row input[type=checkbox]:checked,.frow input[type=checkbox]:checked{background:var(--accent);border-color:var(--accent)}
+.st-row input[type=checkbox]:checked::after,.frow input[type=checkbox]:checked::after{transform:translateX(19px);background:#fff}
+.st-sec h4{position:sticky;top:0;background:var(--bg2);z-index:2;padding:2px 0}
+.st-row span{line-height:1.35}
 body.no-anim *,body.no-anim *::before,body.no-anim *::after{animation-duration:0.001s!important;transition-duration:0.001s!important}
 .ib.smart-add{position:relative;overflow:hidden}
 .ib.smart-add::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.4),transparent 60%);pointer-events:none}
