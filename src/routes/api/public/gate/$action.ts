@@ -140,7 +140,7 @@ async function scheduleSync(request: Request) {
   const sameDay = existing && String(existing.day) === body.day;
   const { error } = await db.from("device_schedules").upsert({
     device_id: device.id,
-    day: body.day,
+    day: String(body.day),
     tz_offset: Number.isFinite(Number(body.tzOffset)) ? Number(body.tzOffset) : 300,
     tasks,
     sent: sameDay ? existing!.sent : {},

@@ -150,6 +150,9 @@ export const Route = createFileRoute("/api/ai-plan")({
             "- Namoz (cat='prayer') vazifalarini SIRA siljitma. Ular tayanch nuqta.",
             "- Boshqa vazifalarni namoz vaqtlariga to'qnashmaydigan qilib joylashtir.",
             "- Vazifa davomiyligini iloji boricha saqla.",
+            "- Bajarilgan (done=true) vazifalarga tegma.",
+            "- Kechikish bo'lsa: avval free=true yoki priority='past' bloklarni (erkin vaqt, film, tanaffus) qisqartir.",
+            "- Dars (english/school/ibrat/rtm), namoz va dori vazifalarini qisqartirma va siljitma.",
             "- Ovqat (food) namozdan oldin/keyin mos joyga; sport (sport) ertalabki/kechki bo'sh oralig'ga; ish (work) uzun bo'laklarga.",
             "- Har bir vazifa uchun HH:MM formatida start va end qaytar.",
             "Faqat JSON qaytar, boshqa matn yo'q. Format:",
@@ -158,8 +161,9 @@ export const Route = createFileRoute("/api/ai-plan")({
           const slim = tasks.map((t: any) => ({
             id: t.id, name: t.name, cat: t.cat,
             start: t.start, end: t.end,
+            done: !!t.done, free: !!t.free, priority: t.priority || "orta",
           }));
-          const user = JSON.stringify({ prayers, tasks: slim });
+          const user = JSON.stringify({ prayers, now: payload.now || null, tasks: slim });
           const r = await callGateway(
             [
               { role: "system", content: system },

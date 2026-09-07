@@ -35,7 +35,7 @@ export async function sendPushTo(
         privateKey: process.env["VAPID_PRIVATE_KEY"]!,
       },
     );
-    const res = await fetch(sub.endpoint, payload);
+    const res = await fetch(sub.endpoint, payload as unknown as RequestInit);
     return { ok: res.ok, gone: res.status === 404 || res.status === 410 };
   } catch (e) {
     console.error("[push]", e);
